@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "impact_basic",
+  "version": 1,
+  "name": "Impact Burst",
+  "category": "combat",
+  "description": "A short stylized hit: bright flash plus rays that shoot outward and fade.",
+  "tags": ["hit", "impact", "burst", "flash", "rays"],
+  "generator": "radial_burst",
+  "generator_version": 1,
+  "source_duration_seconds": 0.35,
+  "supports_loop": false,
+  "required_features": ["bones", "regions", "slot_color", "attachment_keys", "bezier_curves"],
+  "preview": null,
+  "images": {"flash": "images/flash.png", "ray": "images/ray.png"},
+  "common_overrides": {
+    "duration": {"default": 0.35, "min": 0.1, "max": 2.0},
+    "primary_color": {"default": "ffb340ff"},
+    "secondary_color": {"default": "fff6dcff"}
+  },
+  "parameters": {
+    "ray_count": {"type": "integer", "default": 8, "min": 3, "max": 16, "label": "Ray count"},
+    "spread": {"type": "number", "default": 360, "min": 30, "max": 360, "unit": "°", "label": "Spread",
+               "description": "360 = full ring; smaller values fan the rays around +X (use Rotation to aim)"},
+    "ray_length": {"type": "number", "default": 110, "min": 20, "max": 400, "unit": "px", "label": "Ray length"},
+    "ray_thickness": {"type": "number", "default": 18, "min": 4, "max": 80, "unit": "px", "label": "Ray thickness"},
+    "travel_distance": {"type": "number", "default": 80, "min": 0, "max": 300, "unit": "px",
+                        "label": "Travel distance", "description": "How far each ray moves outward"},
+    "start_radius": {"type": "number", "default": 20, "min": 0, "max": 200, "unit": "px", "label": "Start radius",
+                     "description": "Distance from the centre where rays begin"},
+    "flash_size": {"type": "number", "default": 170, "min": 0, "max": 600, "unit": "px", "label": "Flash size",
+                   "description": "0 removes the flash"},
+    "flash_portion": {"type": "number", "default": 0.45, "min": 0.1, "max": 0.9, "label": "Flash duration",
+                      "description": "Fraction of the effect duration the flash is visible"},
+    "angle_jitter": {"type": "number", "default": 8, "min": 0, "max": 30, "unit": "°", "group": "advanced",
+                     "label": "Angle jitter", "description": "Random angle offset per ray (uses seed)"},
+    "length_variance": {"type": "number", "default": 0.25, "min": 0, "max": 0.5, "group": "advanced",
+                        "label": "Length variance", "description": "Random length change per ray (uses seed)"},
+    "stagger": {"type": "number", "default": 0.12, "min": 0, "max": 0.5, "group": "advanced",
+                "label": "Stagger", "description": "Random start offset per ray, as a fraction of duration"}
+  }
+}

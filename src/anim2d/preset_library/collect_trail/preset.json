@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "id": "collect_trail",
+  "version": 1,
+  "name": "Collect to Counter",
+  "category": "slots",
+  "description": "A star flies along an arc to a target (a counter or meter), leaving sparkles, and pops there.",
+  "tags": [
+    "collect",
+    "fly",
+    "trail",
+    "counter",
+    "meter",
+    "pickup",
+    "reward",
+    "slots"
+  ],
+  "generator": "collect_trail",
+  "generator_version": 1,
+  "source_duration_seconds": 0.9,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "star": "images/star.png",
+    "sparkle": "images/sparkle.png",
+    "glow": "images/glow.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.9,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ffe066ff"
+    },
+    "secondary_color": {
+      "default": "fff6c8ff"
+    }
+  },
+  "parameters": {
+    "target_x": {
+      "type": "number",
+      "default": 400,
+      "min": -2000,
+      "max": 2000,
+      "label": "Target X",
+      "unit": "px",
+      "description": "Where it flies to, from the effect position"
+    },
+    "target_y": {
+      "type": "number",
+      "default": 300,
+      "min": -2000,
+      "max": 2000,
+      "label": "Target Y",
+      "unit": "px"
+    },
+    "arc_height": {
+      "type": "number",
+      "default": 200,
+      "min": -1000,
+      "max": 1000,
+      "label": "Arc height",
+      "unit": "px",
+      "description": "How much the path bends; 0 = straight"
+    },
+    "star_size": {
+      "type": "number",
+      "default": 70,
+      "min": 10,
+      "max": 300,
+      "label": "Star size",
+      "unit": "px"
+    },
+    "trail": {
+      "type": "integer",
+      "default": 10,
+      "min": 0,
+      "max": 30,
+      "label": "Trail sparkles"
+    },
+    "pop_size": {
+      "type": "number",
+      "default": 160,
+      "min": 0,
+      "max": 500,
+      "label": "Arrival pop",
+      "unit": "px",
+      "description": "0 removes the pop"
+    },
+    "travel_portion": {
+      "type": "number",
+      "default": 0.65,
+      "min": 0.2,
+      "max": 0.95,
+      "label": "Flight time",
+      "description": "Fraction of the effect spent flying",
+      "group": "advanced"
+    }
+  }
+}

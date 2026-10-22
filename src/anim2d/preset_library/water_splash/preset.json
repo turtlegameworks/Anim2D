@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "water_splash",
+  "version": 1,
+  "name": "Water Splash",
+  "category": "casual",
+  "description": "Drops leap up in a crown, arc over and fall, with a ripple: water, juice, puzzles.",
+  "tags": [
+    "water",
+    "splash",
+    "drop",
+    "liquid",
+    "juice",
+    "rain",
+    "casual"
+  ],
+  "generator": "splash",
+  "generator_version": 1,
+  "source_duration_seconds": 0.9,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "drop": "images/drop.png",
+    "ring": "images/ring.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.9,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "5ab8ffff"
+    },
+    "secondary_color": {
+      "default": "bfe6ffff"
+    }
+  },
+  "parameters": {
+    "drops": {
+      "type": "integer",
+      "default": 12,
+      "min": 2,
+      "max": 40,
+      "label": "Drops"
+    },
+    "spread": {
+      "type": "number",
+      "default": 50,
+      "min": 10,
+      "max": 180,
+      "label": "Spread",
+      "unit": "\u00b0"
+    },
+    "speed": {
+      "type": "number",
+      "default": 600,
+      "min": 50,
+      "max": 2500,
+      "label": "Throw speed",
+      "unit": "px",
+      "description": "Higher throws the drops higher"
+    },
+    "gravity": {
+      "type": "number",
+      "default": 620,
+      "min": 0,
+      "max": 3000,
+      "label": "Gravity",
+      "unit": "px",
+      "description": "About the throw speed lands the drops where they started"
+    },
+    "drop_size": {
+      "type": "number",
+      "default": 28,
+      "min": 6,
+      "max": 80,
+      "label": "Drop size",
+      "unit": "px"
+    }
+  }
+}

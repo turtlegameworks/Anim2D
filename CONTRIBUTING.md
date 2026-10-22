@@ -1,0 +1,62 @@
+# Contributing to Anim2D
+
+Thanks for helping. Anim2D is free and open source under the [MIT License](LICENSE), and contributions
+of any size are welcome: bug reports, docs fixes, new FX presets, features.
+
+## Ground rules
+
+* Open an issue first for anything bigger than a small fix, so we can agree on the approach.
+* Keep a pull request to one change. Behaviour fixes and pure refactors or renames go in separate PRs.
+* Never commit files you don't have the right to share: Spine example projects, client or game art,
+  licensed fonts. Tests that need such files read their location from an environment variable and skip
+  when it isn't set (see `tests/test_spine_project.py`).
+* Be kind. Disagreement about code is fine; disrespect for people isn't.
+
+## Set up
+
+Windows, Python 3.11+ and Git; Node.js 22 for the runtime-parity tests.
+
+```bash
+git clone https://github.com/turtlegameworks/Anim2D.git
+cd Anim2D
+python -m venv .venv
+.venv\Scripts\python -m pip install -e .[dev]
+.venv\Scripts\python tools\fetch_spine_runtime.py
+```
+
+## Before you open a pull request
+
+```bash
+.venv\Scripts\ruff check .
+.venv\Scripts\python -m pytest
+```
+
+Both must pass. CI runs the same commands on Windows with Python 3.11 and 3.13, then builds and
+self-tests the program. Add a test for every bug you fix: it should fail before your change and pass
+after.
+
+What reviewers look for:
+
+* **User data is safe.** Nothing is overwritten without an explicit overwrite option, nothing is
+  written outside the folder the user chose, and edits that say they can be undone really can be.
+* **Readable errors.** Expected failures raise `EditorError` / `PresetError` with a message a user can
+  act on, not a traceback.
+* **Spine compatibility.** Exports must still load in the official runtimes (the parity tests check
+  this). Don't change binary or JSON output to work around a test.
+* **Match the surrounding code.** Same naming, comment style and structure as the module you touch.
+
+Every pull request is also reviewed automatically by [CodeRabbit](https://coderabbit.ai), configured in
+`.coderabbit.yaml`. Treat its comments like any reviewer's: fix what's right, reply where it's wrong.
+You can talk to it in the PR with `@coderabbitai`.
+
+## Commit messages
+
+A short summary line in the imperative ("Fix atlas page overwrite"), a blank line, then what changed and
+why if it isn't obvious.
+
+## Releases (maintainers)
+
+1. Bump `__version__` in `src/anim2d/__init__.py` and add the release to `CHANGELOG.md`.
+2. Merge to `main`, then tag it: `git tag v0.16.0` and `git push origin v0.16.0`.
+3. The **Release** workflow tests, builds, self-tests and publishes the installer, the portable exe and
+   `SHA256SUMS.txt`. The tag must match the version or the workflow stops.

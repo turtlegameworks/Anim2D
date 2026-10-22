@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Tests
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/runtime/vendor/
+
+# Build output (CI builds releases; see tools/build_exe.py)
+build/
+dist/
+*.spec
+
+# Generated packages and local runs
+output/
+selftest/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Local assistant settings
+.claude/settings.local.json

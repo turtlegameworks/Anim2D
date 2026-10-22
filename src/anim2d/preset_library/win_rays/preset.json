@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "id": "win_rays",
+  "version": 1,
+  "name": "Win Rays",
+  "category": "slots",
+  "description": "Soft light rays fan out behind a symbol or prize and turn slowly over a glow.",
+  "tags": [
+    "win",
+    "rays",
+    "god rays",
+    "sunburst",
+    "prize",
+    "reward",
+    "behind",
+    "slots"
+  ],
+  "generator": "rotating_rays",
+  "generator_version": 1,
+  "source_duration_seconds": 2.0,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "ray": "images/ray.png",
+    "glow": "images/glow.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 2.0,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "fff1a8ff"
+    },
+    "secondary_color": {
+      "default": "ffc54aff"
+    }
+  },
+  "parameters": {
+    "ray_count": {
+      "type": "integer",
+      "default": 12,
+      "min": 3,
+      "max": 32,
+      "label": "Rays"
+    },
+    "ray_length": {
+      "type": "number",
+      "default": 380,
+      "min": 50,
+      "max": 1200,
+      "label": "Ray length",
+      "unit": "px"
+    },
+    "ray_width": {
+      "type": "number",
+      "default": 120,
+      "min": 10,
+      "max": 500,
+      "label": "Ray width",
+      "unit": "px"
+    },
+    "spin": {
+      "type": "number",
+      "default": 60,
+      "min": -720,
+      "max": 720,
+      "label": "Spin",
+      "unit": "\u00b0",
+      "description": "Total turn; negative turns clockwise"
+    },
+    "glow_size": {
+      "type": "number",
+      "default": 320,
+      "min": 0,
+      "max": 900,
+      "label": "Glow size",
+      "unit": "px",
+      "description": "0 removes the glow"
+    },
+    "hold": {
+      "type": "number",
+      "default": 0.75,
+      "min": 0.3,
+      "max": 0.95,
+      "label": "Fade start",
+      "group": "advanced"
+    }
+  }
+}

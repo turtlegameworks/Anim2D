@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "poof_reveal",
+  "version": 1,
+  "name": "Poof Reveal",
+  "category": "reveal",
+  "description": "Smoke bursts out and thins away to reveal a character or symbol, with a flash and sparkles.",
+  "tags": [
+    "reveal",
+    "poof",
+    "smoke",
+    "appear",
+    "character",
+    "transform",
+    "slots"
+  ],
+  "generator": "poof_reveal",
+  "generator_version": 1,
+  "source_duration_seconds": 0.8,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "smoke": "images/smoke.png",
+    "sparkle": "images/sparkle.png",
+    "flash": "images/flash.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.8,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "f2eef8ff"
+    },
+    "secondary_color": {
+      "default": "fff0a0ff"
+    }
+  },
+  "parameters": {
+    "size": {
+      "type": "number",
+      "default": 320,
+      "min": 60,
+      "max": 1200,
+      "label": "Size",
+      "unit": "px"
+    },
+    "puffs": {
+      "type": "integer",
+      "default": 10,
+      "min": 3,
+      "max": 30,
+      "label": "Puffs"
+    },
+    "flash_size": {
+      "type": "number",
+      "default": 260,
+      "min": 0,
+      "max": 900,
+      "label": "Flash size",
+      "unit": "px",
+      "description": "0 removes the flash"
+    },
+    "sparkles": {
+      "type": "integer",
+      "default": 10,
+      "min": 0,
+      "max": 40,
+      "label": "Sparkles"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "minimal_pop",
+  "version": 1,
+  "name": "Minimal Pop (format test)",
+  "category": "test",
+  "description": "One image that pops in, grows and fades. Smallest import test for a Spine version.",
+  "tags": ["test", "fixture"],
+  "generator": "single_pop",
+  "generator_version": 1,
+  "source_duration_seconds": 0.4,
+  "supports_loop": false,
+  "required_features": ["bones", "regions", "slot_color", "attachment_keys"],
+  "preview": null,
+  "images": {"dot": "images/dot.png"},
+  "common_overrides": {
+    "duration": {"default": 0.4}
+  },
+  "parameters": {
+    "end_scale": {"type": "number", "default": 1.5, "min": 0.5, "max": 4, "unit": "x",
+                  "label": "End scale", "description": "Size at the end relative to the image"}
+  }
+}

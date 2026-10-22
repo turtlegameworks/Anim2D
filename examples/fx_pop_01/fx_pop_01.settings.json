@@ -1,0 +1,21 @@
+{
+  "variant_schema_version": 1,
+  "preset_id": "minimal_pop",
+  "preset_version": 1,
+  "compatibility_profile": "spine-3.8.75",
+  "instance_name": "fx_pop_01",
+  "settings": {
+    "primary_color": "ffffffff",
+    "secondary_color": "ffffffff",
+    "opacity": 1.0,
+    "scale": 1.0,
+    "rotation": 0.0,
+    "position_x": 0.0,
+    "position_y": 0.0,
+    "mirror": false,
+    "duration": 0.4,
+    "delay": 0.0,
+    "seed": 1,
+    "end_scale": 1.5
+  }
+}

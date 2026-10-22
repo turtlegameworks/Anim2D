@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "explosion",
+  "version": 1,
+  "name": "Explosion",
+  "category": "combat",
+  "description": "A bright flash, billowing smoke puffs and flying debris: bombs, blasts, destruction.",
+  "tags": [
+    "explosion",
+    "blast",
+    "bomb",
+    "smoke",
+    "boom",
+    "debris"
+  ],
+  "generator": "explosion",
+  "generator_version": 1,
+  "source_duration_seconds": 0.9,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "flash": "images/flash.png",
+    "smoke": "images/smoke.png",
+    "debris": "images/debris.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.9,
+      "min": 0.1,
+      "max": 4.0
+    },
+    "primary_color": {
+      "default": "ffb347ff"
+    },
+    "secondary_color": {
+      "default": "5a4a44ff"
+    }
+  },
+  "parameters": {
+    "blast_radius": {
+      "type": "number",
+      "default": 120,
+      "min": 20,
+      "max": 500,
+      "label": "Blast radius",
+      "unit": "px"
+    },
+    "smoke_puffs": {
+      "type": "integer",
+      "default": 8,
+      "min": 0,
+      "max": 24,
+      "label": "Smoke puffs"
+    },
+    "smoke_size": {
+      "type": "number",
+      "default": 140,
+      "min": 20,
+      "max": 500,
+      "label": "Smoke size",
+      "unit": "px"
+    },
+    "debris": {
+      "type": "integer",
+      "default": 10,
+      "min": 0,
+      "max": 40,
+      "label": "Debris"
+    },
+    "flash_size": {
+      "type": "number",
+      "default": 280,
+      "min": 0,
+      "max": 800,
+      "label": "Flash size",
+      "unit": "px",
+      "description": "0 removes the flash"
+    }
+  }
+}

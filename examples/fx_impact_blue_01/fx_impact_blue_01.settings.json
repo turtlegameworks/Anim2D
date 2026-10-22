@@ -1,0 +1,31 @@
+{
+  "variant_schema_version": 1,
+  "preset_id": "impact_basic",
+  "preset_version": 1,
+  "compatibility_profile": "spine-3.8.75",
+  "instance_name": "fx_impact_blue_01",
+  "settings": {
+    "primary_color": "3aa0ffff",
+    "secondary_color": "e6f4ffff",
+    "opacity": 1.0,
+    "scale": 1.0,
+    "rotation": 0.0,
+    "position_x": 0.0,
+    "position_y": 0.0,
+    "mirror": false,
+    "duration": 0.25,
+    "delay": 0.0,
+    "seed": 7,
+    "ray_count": 12,
+    "spread": 360.0,
+    "ray_length": 110.0,
+    "ray_thickness": 18.0,
+    "travel_distance": 80.0,
+    "start_radius": 20.0,
+    "flash_size": 170.0,
+    "flash_portion": 0.45,
+    "angle_jitter": 8.0,
+    "length_variance": 0.25,
+    "stagger": 0.12
+  }
+}

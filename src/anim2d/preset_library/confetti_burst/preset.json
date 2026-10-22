@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "id": "confetti_burst",
+  "version": 1,
+  "name": "Confetti Burst",
+  "category": "slots",
+  "description": "Paper strips burst up, flutter, drift and fall in three colours: wins, bonuses, celebrations.",
+  "tags": [
+    "confetti",
+    "celebration",
+    "party",
+    "bonus",
+    "win",
+    "slots"
+  ],
+  "generator": "confetti",
+  "generator_version": 1,
+  "source_duration_seconds": 1.8,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "confetti": "images/confetti.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.8,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ff4f7bff"
+    },
+    "secondary_color": {
+      "default": "3fd2ffff"
+    }
+  },
+  "parameters": {
+    "count": {
+      "type": "integer",
+      "default": 40,
+      "min": 1,
+      "max": 120,
+      "label": "Pieces"
+    },
+    "spread": {
+      "type": "number",
+      "default": 80,
+      "min": 0,
+      "max": 180,
+      "label": "Spread",
+      "unit": "\u00b0"
+    },
+    "speed": {
+      "type": "number",
+      "default": 650,
+      "min": 50,
+      "max": 2000,
+      "label": "Burst height",
+      "unit": "px"
+    },
+    "gravity": {
+      "type": "number",
+      "default": 900,
+      "min": 0,
+      "max": 3000,
+      "label": "Gravity",
+      "unit": "px"
+    },
+    "drift": {
+      "type": "number",
+      "default": 120,
+      "min": 0,
+      "max": 600,
+      "label": "Drift",
+      "unit": "px",
+      "description": "Sideways wander"
+    },
+    "piece_size": {
+      "type": "number",
+      "default": 28,
+      "min": 6,
+      "max": 100,
+      "label": "Piece size",
+      "unit": "px"
+    }
+  }
+}

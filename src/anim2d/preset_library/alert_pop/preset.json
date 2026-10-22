@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "alert_pop",
+  "version": 1,
+  "name": "Alert Pop",
+  "category": "ui",
+  "description": "An exclamation mark pops up with a bounce and a wobble, with emphasis marks: alerts, quests, NPCs.",
+  "tags": [
+    "alert",
+    "exclamation",
+    "warning",
+    "quest",
+    "npc",
+    "notice",
+    "emote",
+    "ui"
+  ],
+  "generator": "alert_pop",
+  "generator_version": 1,
+  "source_duration_seconds": 1.0,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "exclaim": "images/exclaim.png",
+    "line": "images/line.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ffd23aff"
+    },
+    "secondary_color": {
+      "default": "ffffffff"
+    }
+  },
+  "parameters": {
+    "size": {
+      "type": "number",
+      "default": 90,
+      "min": 20,
+      "max": 400,
+      "label": "Size",
+      "unit": "px"
+    },
+    "wobble": {
+      "type": "number",
+      "default": 14,
+      "min": 0,
+      "max": 45,
+      "label": "Wobble",
+      "unit": "\u00b0"
+    },
+    "marks": {
+      "type": "integer",
+      "default": 3,
+      "min": 0,
+      "max": 7,
+      "label": "Emphasis marks"
+    },
+    "hold": {
+      "type": "number",
+      "default": 0.8,
+      "min": 0.3,
+      "max": 0.98,
+      "label": "Fade start",
+      "group": "advanced"
+    }
+  }
+}

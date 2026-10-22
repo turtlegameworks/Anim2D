@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "big_win_coins",
+  "version": 1,
+  "name": "Big Win Coin Shower",
+  "category": "slots",
+  "description": "Gold coins pour down across the screen, flipping and turning, with twinkles: big and mega wins.",
+  "tags": [
+    "big win",
+    "mega win",
+    "coins",
+    "gold",
+    "shower",
+    "rain",
+    "jackpot",
+    "slots"
+  ],
+  "generator": "coin_rain",
+  "generator_version": 1,
+  "source_duration_seconds": 2.0,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "coin": "images/coin.png",
+    "sparkle": "images/sparkle.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 2.0,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ffc93aff"
+    },
+    "secondary_color": {
+      "default": "fff3c4ff"
+    }
+  },
+  "parameters": {
+    "count": {
+      "type": "integer",
+      "default": 30,
+      "min": 1,
+      "max": 80,
+      "label": "Coins"
+    },
+    "area_width": {
+      "type": "number",
+      "default": 700,
+      "min": 100,
+      "max": 2000,
+      "label": "Area width",
+      "unit": "px"
+    },
+    "drop_height": {
+      "type": "number",
+      "default": 900,
+      "min": 200,
+      "max": 2500,
+      "label": "Fall height",
+      "unit": "px"
+    },
+    "coin_size": {
+      "type": "number",
+      "default": 56,
+      "min": 12,
+      "max": 160,
+      "label": "Coin size",
+      "unit": "px"
+    },
+    "shower_time": {
+      "type": "number",
+      "default": 0.55,
+      "min": 0.0,
+      "max": 0.8,
+      "label": "Shower length",
+      "description": "How long new coins keep starting"
+    },
+    "sparkles": {
+      "type": "integer",
+      "default": 14,
+      "min": 0,
+      "max": 50,
+      "label": "Twinkles"
+    }
+  }
+}

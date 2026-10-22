@@ -1,0 +1,67 @@
+{
+  "tool": "anim2d",
+  "tool_version": "0.16.0",
+  "generated_at": "2026-10-22T20:35:28+00:00",
+  "compatibility_profile": "spine-3.8.75",
+  "target": "Spine 3.8.75 (Pro or Essential; regions, bones, slot colour, attachment keys)",
+  "verification": {
+    "automated_structure_check": "passed",
+    "spine_editor_import": "NOT VERIFIED by this tool - follow IMPORT_IN_SPINE.md"
+  },
+  "preset": {
+    "id": "impact_basic",
+    "version": 1,
+    "generator": "radial_burst",
+    "generator_version": 1,
+    "source": "built-in"
+  },
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "instance_name": "fx_impact_blue_01",
+  "animation": "fx_impact_blue_01_play",
+  "seed": 7,
+  "duration_seconds": 0.25,
+  "delay_seconds": 0.0,
+  "settings": {
+    "primary_color": "3aa0ffff",
+    "secondary_color": "e6f4ffff",
+    "opacity": 1.0,
+    "scale": 1.0,
+    "rotation": 0.0,
+    "position_x": 0.0,
+    "position_y": 0.0,
+    "mirror": false,
+    "duration": 0.25,
+    "delay": 0.0,
+    "seed": 7,
+    "ray_count": 12,
+    "spread": 360.0,
+    "ray_length": 110.0,
+    "ray_thickness": 18.0,
+    "travel_distance": 80.0,
+    "start_radius": 20.0,
+    "flash_size": 170.0,
+    "flash_portion": 0.45,
+    "angle_jitter": 8.0,
+    "length_variance": 0.25,
+    "stagger": 0.12
+  },
+  "counts": {
+    "bones": 14,
+    "slots": 13,
+    "attachments": 13,
+    "animations": 1,
+    "keys": 139
+  },
+  "warnings": [],
+  "files": {
+    "fx_impact_blue_01.json": "847ffec1e39e32726cd01fab5906346f50ea220e464474d834eaae03cf0e3fb3",
+    "images/fx_impact_blue_01/flash.png": "1314fb7708bb14116b9dd7aef02b309be02bc7be877045fa97919e1c0df758e7",
+    "images/fx_impact_blue_01/ray.png": "5b47c3ff8c02723fc1ee31259a23baee4f4631f73a524ddbb48f7fc3dae34770"
+  }
+}

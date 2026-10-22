@@ -1,0 +1,46 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Anim2D version
+      description: Shown in Installed apps, or `__version__` in src/anim2d/__init__.py.
+      placeholder: "0.16.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options: [Editor, FX Builder, FX command line, Installer, Export / runtime compatibility, Other]
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+  - type: textarea
+    id: files
+    attributes:
+      label: Files, screenshots or error text
+      description: Attach a small project or export that shows the problem if you can (only files you may share).

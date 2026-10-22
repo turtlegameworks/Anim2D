@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "loading_spinner",
+  "version": 1,
+  "name": "Loading Spinner",
+  "category": "ui",
+  "description": "Dots on a circle, each smaller and fainter than the last, turning round: waiting and loading.",
+  "tags": [
+    "loading",
+    "spinner",
+    "wait",
+    "busy",
+    "progress",
+    "ui"
+  ],
+  "generator": "orbit_spinner",
+  "generator_version": 1,
+  "source_duration_seconds": 1.0,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "dot": "images/dot.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ffffffff"
+    },
+    "secondary_color": {
+      "default": "9fd8ffff"
+    }
+  },
+  "parameters": {
+    "dots": {
+      "type": "integer",
+      "default": 8,
+      "min": 3,
+      "max": 16,
+      "label": "Dots"
+    },
+    "radius": {
+      "type": "number",
+      "default": 36,
+      "min": 8,
+      "max": 200,
+      "label": "Radius",
+      "unit": "px"
+    },
+    "dot_size": {
+      "type": "number",
+      "default": 14,
+      "min": 3,
+      "max": 60,
+      "label": "Dot size",
+      "unit": "px"
+    },
+    "turns": {
+      "type": "number",
+      "default": 1.0,
+      "min": 0.25,
+      "max": 4.0,
+      "label": "Turns",
+      "description": "Whole turns over the effect; loop it for longer waits"
+    }
+  }
+}

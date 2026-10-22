@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: "1"
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install ruff==0.14.1
+      - run: ruff check --output-format github .
+
+  test:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      # The official spine-ts runtimes and example skeletons the parity tests compare against
+      # (downloaded at pinned commits and checked against SHA-256 hashes).
+      - name: Cache Spine runtimes
+        uses: actions/cache@v4
+        with:
+          path: tests/runtime/vendor
+          key: spine-runtime-${{ hashFiles('tools/fetch_spine_runtime.py') }}
+      - name: Fetch Spine runtimes
+        run: python tools/fetch_spine_runtime.py
+      - name: Test
+        run: python -m pytest -ra
+
+  build:
+    name: Windows build
+    runs-on: windows-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e ".[build]"
+      - name: Build program and installer
+        run: python tools/build_exe.py
+      - name: Self-test the built program
+        shell: pwsh
+        run: ./tools/self_test.ps1 -Program dist/Anim2D.exe -Output selftest
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Anim2D-windows-${{ github.sha }}
+          path: |
+            dist/Anim2D.exe
+            dist/Anim2D-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload self-test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-${{ github.sha }}
+          path: selftest
+          if-no-files-found: ignore
+          retention-days: 7

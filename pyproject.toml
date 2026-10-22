@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anim2d"
+dynamic = ["version"]
+description = "Free, open-source 2D skeletal animation editor and FX builder that reads and writes Spine data"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+keywords = ["animation", "2d", "skeletal-animation", "spine", "game-development", "vfx"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Games/Entertainment",
+]
+dependencies = [
+    "pillow==12.3.0",
+    "PySide6-Essentials==6.12.0",
+    "PySide6-Addons==6.12.0",  # QtMultimedia: MP4 export, reference video, event audio
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "ruff==0.14.1"]
+build = ["pyinstaller==6.22.3"]
+
+[project.urls]
+Homepage = "https://github.com/turtlegameworks/Anim2D"
+Issues = "https://github.com/turtlegameworks/Anim2D/issues"
+
+[project.scripts]
+anim2d-fx = "anim2d.cli:main"
+
+[project.gui-scripts]
+anim2d = "anim2d.editor.app:main"
+anim2d-fx-builder = "anim2d.app:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "anim2d.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+anim2d = ["preset_library/**/*", "assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["tests/runtime/vendor"]
+
+[tool.ruff.lint]
+# A baseline that the current code passes; tighten it gradually.
+select = ["E9", "F63", "F7", "F82", "F401", "F811", "F841"]

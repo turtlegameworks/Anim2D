@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "firework",
+  "version": 1,
+  "name": "Firework",
+  "category": "casual",
+  "description": "A rocket streaks up and bursts into a ring of sparks that droop and fade: celebrations.",
+  "tags": [
+    "firework",
+    "celebration",
+    "party",
+    "burst",
+    "win",
+    "new year",
+    "casual"
+  ],
+  "generator": "firework",
+  "generator_version": 1,
+  "source_duration_seconds": 1.6,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "streak": "images/streak.png",
+    "spark": "images/spark.png",
+    "glow": "images/glow.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.6,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ff5fa8ff"
+    },
+    "secondary_color": {
+      "default": "ffe27aff"
+    }
+  },
+  "parameters": {
+    "height": {
+      "type": "number",
+      "default": 300,
+      "min": 0,
+      "max": 1200,
+      "label": "Burst height",
+      "unit": "px"
+    },
+    "launch_portion": {
+      "type": "number",
+      "default": 0.3,
+      "min": 0.0,
+      "max": 0.6,
+      "label": "Launch time",
+      "description": "0 bursts at once without a rocket"
+    },
+    "sparks": {
+      "type": "integer",
+      "default": 24,
+      "min": 4,
+      "max": 60,
+      "label": "Sparks"
+    },
+    "burst_radius": {
+      "type": "number",
+      "default": 170,
+      "min": 30,
+      "max": 600,
+      "label": "Burst radius",
+      "unit": "px"
+    }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "id": "sparkle_twinkle",
+  "version": 1,
+  "name": "Sparkle Twinkle",
+  "category": "magic",
+  "description": "Stars pop up around a point and twinkle out: pickups, shiny items, magic.",
+  "tags": [
+    "sparkle",
+    "twinkle",
+    "star",
+    "shine",
+    "pickup",
+    "magic"
+  ],
+  "generator": "scatter_pop",
+  "generator_version": 1,
+  "source_duration_seconds": 0.9,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "sparkle": "images/sparkle.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.9,
+      "min": 0.1,
+      "max": 4.0
+    },
+    "primary_color": {
+      "default": "fff3a8ff"
+    },
+    "secondary_color": {
+      "default": "ffffffff"
+    }
+  },
+  "parameters": {
+    "count": {
+      "type": "integer",
+      "default": 10,
+      "min": 1,
+      "max": 40,
+      "label": "Stars"
+    },
+    "radius": {
+      "type": "number",
+      "default": 90,
+      "min": 0,
+      "max": 400,
+      "label": "Radius",
+      "unit": "px"
+    },
+    "star_size": {
+      "type": "number",
+      "default": 48,
+      "min": 8,
+      "max": 200,
+      "label": "Star size",
+      "unit": "px"
+    },
+    "size_variance": {
+      "type": "number",
+      "default": 0.4,
+      "min": 0,
+      "max": 0.9,
+      "label": "Size variance",
+      "group": "advanced"
+    },
+    "spread_time": {
+      "type": "number",
+      "default": 0.5,
+      "min": 0,
+      "max": 0.9,
+      "label": "Spread in time",
+      "description": "How spread out the pops are",
+      "group": "advanced"
+    }
+  }
+}

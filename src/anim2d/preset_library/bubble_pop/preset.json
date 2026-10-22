@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "bubble_pop",
+  "version": 1,
+  "name": "Bubble Pop",
+  "category": "casual",
+  "description": "A bubble wobbles, swells and bursts into a ring and droplets: bubble shooters, pops, taps.",
+  "tags": [
+    "bubble",
+    "pop",
+    "burst",
+    "bubble shooter",
+    "tap",
+    "casual"
+  ],
+  "generator": "bubble_pop",
+  "generator_version": 1,
+  "source_duration_seconds": 0.8,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "bubble": "images/bubble.png",
+    "droplet": "images/droplet.png",
+    "ring": "images/ring.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.8,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "9fe6ffff"
+    },
+    "secondary_color": {
+      "default": "ffffffff"
+    }
+  },
+  "parameters": {
+    "bubble_size": {
+      "type": "number",
+      "default": 140,
+      "min": 20,
+      "max": 600,
+      "label": "Bubble size",
+      "unit": "px"
+    },
+    "pop_time": {
+      "type": "number",
+      "default": 0.45,
+      "min": 0.05,
+      "max": 0.8,
+      "label": "Pop at",
+      "description": "When it bursts, as a fraction of the effect"
+    },
+    "droplets": {
+      "type": "integer",
+      "default": 10,
+      "min": 0,
+      "max": 30,
+      "label": "Droplets"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit reviews every pull request to this repository. Reference: https://docs.coderabbit.ai/reference/configuration
+language: en-US
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  collapse_walkthrough: false
+  sequence_diagrams: false
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - ".*"  # review PRs into any branch, not only main
+  path_filters:
+    - "!tests/runtime/vendor/**"
+    - "!**/*.png"
+    - "!**/*.gif"
+    - "!**/*.ico"
+    - "!examples/**"
+  path_instructions:
+    - path: "src/anim2d/**/*.py"
+      instructions: |
+        Anim2D is a PySide6 desktop editor for 2D skeletal animation that reads and writes Spine data.
+        Focus on correctness and data safety: user files must never be overwritten or written outside the
+        chosen folder without an explicit overwrite, undo must restore what an edit changed, and expected
+        failures should raise EditorError/PresetError with a readable message rather than a raw traceback.
+        Qt widgets may only be touched from the GUI thread.
+    - path: "src/anim2d/formats/**"
+      instructions: |
+        These modules read and write Spine 3.8 / 4.0 JSON, 4.0 binary (.skel), atlases and .spine projects.
+        Check that output stays compatible with the official spine-runtimes and that readers reject
+        malformed input with a clear error instead of crashing or allocating without bounds.
+    - path: "src/anim2d/preset_library/**/preset.json"
+      instructions: |
+        Data-only FX presets. Check the schema against docs/preset_authoring.md: numeric parameters need
+        min <= default <= max, and image paths must stay inside the preset folder.
+    - path: "tests/**/*.py"
+      instructions: |
+        Tests run headless on Windows (QT_QPA_PLATFORM=offscreen). Prefer assertions on behaviour over
+        restating implementation, and make sure tests use tmp_path rather than real user folders.
+    - path: "installer/**"
+      instructions: |
+        Per-user Windows installer. It must only ever create or delete the files, shortcuts and registry
+        key it owns; flag anything that trusts paths from the manifest or builds shell commands from paths.
+    - path: ".github/workflows/**"
+      instructions: |
+        Keep permissions minimal, pin third-party actions to a major version or SHA, and never expose
+        secrets to pull requests from forks.
+  tools:
+    ruff:
+      enabled: true
+    actionlint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    shellcheck:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false

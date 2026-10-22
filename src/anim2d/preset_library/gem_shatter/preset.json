@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "id": "gem_shatter",
+  "version": 1,
+  "name": "Gem Shatter",
+  "category": "casual",
+  "description": "A tile or gem breaks into shards that burst out, spin and drop: match-3 clears and breaks.",
+  "tags": [
+    "match 3",
+    "match-3",
+    "gem",
+    "tile",
+    "break",
+    "shatter",
+    "clear",
+    "crystal",
+    "casual"
+  ],
+  "generator": "shatter",
+  "generator_version": 1,
+  "source_duration_seconds": 0.7,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "shard": "images/shard.png",
+    "flash": "images/flash.png",
+    "sparkle": "images/sparkle.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.7,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "5fd0ffff"
+    },
+    "secondary_color": {
+      "default": "c9f2ffff"
+    }
+  },
+  "parameters": {
+    "shards": {
+      "type": "integer",
+      "default": 10,
+      "min": 3,
+      "max": 30,
+      "label": "Shards"
+    },
+    "burst": {
+      "type": "number",
+      "default": 220,
+      "min": 30,
+      "max": 800,
+      "label": "Burst distance",
+      "unit": "px"
+    },
+    "gravity": {
+      "type": "number",
+      "default": 260,
+      "min": 0,
+      "max": 1200,
+      "label": "Gravity",
+      "unit": "px"
+    },
+    "shard_size": {
+      "type": "number",
+      "default": 34,
+      "min": 8,
+      "max": 120,
+      "label": "Shard size",
+      "unit": "px"
+    },
+    "flash_size": {
+      "type": "number",
+      "default": 150,
+      "min": 0,
+      "max": 500,
+      "label": "Flash size",
+      "unit": "px",
+      "description": "0 removes the flash"
+    },
+    "sparkles": {
+      "type": "integer",
+      "default": 5,
+      "min": 0,
+      "max": 20,
+      "label": "Sparkles"
+    }
+  }
+}

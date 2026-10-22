@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "id": "star_rating",
+  "version": 1,
+  "name": "Star Rating",
+  "category": "casual",
+  "description": "Stars pop in one after another along an arc with a bounce and sparkles: level complete.",
+  "tags": [
+    "stars",
+    "rating",
+    "level complete",
+    "score",
+    "result",
+    "win",
+    "casual"
+  ],
+  "generator": "star_rating",
+  "generator_version": 1,
+  "source_duration_seconds": 1.6,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "star": "images/star.png",
+    "sparkle": "images/sparkle.png",
+    "glow": "images/glow.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.6,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ffd23aff"
+    },
+    "secondary_color": {
+      "default": "fff0a0ff"
+    }
+  },
+  "parameters": {
+    "stars": {
+      "type": "integer",
+      "default": 3,
+      "min": 1,
+      "max": 5,
+      "label": "Stars"
+    },
+    "spacing": {
+      "type": "number",
+      "default": 130,
+      "min": 30,
+      "max": 400,
+      "label": "Spacing",
+      "unit": "px"
+    },
+    "arc": {
+      "type": "number",
+      "default": 30,
+      "min": -200,
+      "max": 200,
+      "label": "Arc",
+      "unit": "px",
+      "description": "How much the middle star rises above the others"
+    },
+    "star_size": {
+      "type": "number",
+      "default": 100,
+      "min": 20,
+      "max": 300,
+      "label": "Star size",
+      "unit": "px"
+    },
+    "gap": {
+      "type": "number",
+      "default": 0.18,
+      "min": 0.0,
+      "max": 0.3,
+      "label": "Delay between stars",
+      "description": "Fraction of the effect"
+    },
+    "sparkles": {
+      "type": "integer",
+      "default": 4,
+      "min": 0,
+      "max": 12,
+      "label": "Sparkles per star"
+    },
+    "hold": {
+      "type": "number",
+      "default": 0.85,
+      "min": 0.4,
+      "max": 0.98,
+      "label": "Fade start",
+      "description": "When the stars start to fade",
+      "group": "advanced"
+    }
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "id": "critical_hit",
+  "version": 1,
+  "name": "Critical Hit",
+  "category": "combat",
+  "description": "A sharper, denser hit burst with thin streaks for critical or heavy hits.",
+  "tags": [
+    "critical",
+    "crit",
+    "hit",
+    "impact",
+    "burst",
+    "heavy"
+  ],
+  "generator": "radial_burst",
+  "generator_version": 1,
+  "source_duration_seconds": 0.4,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "flash": "images/flash.png",
+    "ray": "images/ray.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.4,
+      "min": 0.1,
+      "max": 4.0
+    },
+    "primary_color": {
+      "default": "ff4a3aff"
+    },
+    "secondary_color": {
+      "default": "fff2a0ff"
+    }
+  },
+  "parameters": {
+    "ray_count": {
+      "type": "integer",
+      "default": 14,
+      "min": 3,
+      "max": 24,
+      "label": "Ray count"
+    },
+    "spread": {
+      "type": "number",
+      "default": 360,
+      "min": 30,
+      "max": 360,
+      "label": "Spread",
+      "unit": "\u00b0"
+    },
+    "ray_length": {
+      "type": "number",
+      "default": 150,
+      "min": 20,
+      "max": 400,
+      "label": "Ray length",
+      "unit": "px"
+    },
+    "ray_thickness": {
+      "type": "number",
+      "default": 10,
+      "min": 4,
+      "max": 80,
+      "label": "Ray thickness",
+      "unit": "px"
+    },
+    "travel_distance": {
+      "type": "number",
+      "default": 110,
+      "min": 0,
+      "max": 300,
+      "label": "Travel distance",
+      "unit": "px"
+    },
+    "start_radius": {
+      "type": "number",
+      "default": 30,
+      "min": 0,
+      "max": 200,
+      "label": "Start radius",
+      "unit": "px"
+    },
+    "flash_size": {
+      "type": "number",
+      "default": 220,
+      "min": 0,
+      "max": 600,
+      "label": "Flash size",
+      "unit": "px"
+    },
+    "flash_portion": {
+      "type": "number",
+      "default": 0.35,
+      "min": 0.1,
+      "max": 0.9,
+      "label": "Flash duration"
+    },
+    "angle_jitter": {
+      "type": "number",
+      "default": 12,
+      "min": 0,
+      "max": 30,
+      "label": "Angle jitter",
+      "unit": "\u00b0",
+      "group": "advanced"
+    },
+    "length_variance": {
+      "type": "number",
+      "default": 0.35,
+      "min": 0,
+      "max": 0.5,
+      "label": "Length variance",
+      "group": "advanced"
+    },
+    "stagger": {
+      "type": "number",
+      "default": 0.08,
+      "min": 0,
+      "max": 0.5,
+      "label": "Stagger",
+      "group": "advanced"
+    }
+  }
+}

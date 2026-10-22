@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "sleep_zzz",
+  "version": 1,
+  "name": "Sleep Zzz",
+  "category": "gameplay",
+  "description": "Z letters float up one after another, growing and swaying: sleeping, idle, bored.",
+  "tags": [
+    "sleep",
+    "zzz",
+    "idle",
+    "tired",
+    "bored",
+    "snore",
+    "status",
+    "gameplay"
+  ],
+  "generator": "float_letters",
+  "generator_version": 1,
+  "source_duration_seconds": 2.0,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "z": "images/z.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 2.0,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ffffffff"
+    },
+    "secondary_color": {
+      "default": "b8d6ffff"
+    }
+  },
+  "parameters": {
+    "letters": {
+      "type": "integer",
+      "default": 3,
+      "min": 1,
+      "max": 8,
+      "label": "Letters"
+    },
+    "rise": {
+      "type": "number",
+      "default": 120,
+      "min": 20,
+      "max": 500,
+      "label": "Rise",
+      "unit": "px"
+    },
+    "drift": {
+      "type": "number",
+      "default": 60,
+      "min": -300,
+      "max": 300,
+      "label": "Drift",
+      "unit": "px",
+      "description": "Sideways; negative goes left"
+    },
+    "letter_size": {
+      "type": "number",
+      "default": 36,
+      "min": 8,
+      "max": 160,
+      "label": "Letter size",
+      "unit": "px"
+    }
+  }
+}

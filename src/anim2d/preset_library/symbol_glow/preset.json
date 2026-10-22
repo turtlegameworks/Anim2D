@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "symbol_glow",
+  "version": 1,
+  "name": "Symbol Highlight",
+  "category": "slots",
+  "description": "A glow pulses behind a winning symbol, each pulse sends out a ring, sparkles circle it.",
+  "tags": [
+    "symbol",
+    "highlight",
+    "win line",
+    "glow",
+    "pulse",
+    "winning symbol",
+    "slots"
+  ],
+  "generator": "pulse_glow",
+  "generator_version": 1,
+  "source_duration_seconds": 1.6,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "glow": "images/glow.png",
+    "ring": "images/ring.png",
+    "sparkle": "images/sparkle.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.6,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ffe27aff"
+    },
+    "secondary_color": {
+      "default": "ffb52eff"
+    }
+  },
+  "parameters": {
+    "pulses": {
+      "type": "integer",
+      "default": 2,
+      "min": 1,
+      "max": 6,
+      "label": "Pulses"
+    },
+    "glow_size": {
+      "type": "number",
+      "default": 240,
+      "min": 40,
+      "max": 800,
+      "label": "Glow size",
+      "unit": "px"
+    },
+    "ring_size": {
+      "type": "number",
+      "default": 200,
+      "min": 40,
+      "max": 800,
+      "label": "Ring size",
+      "unit": "px"
+    },
+    "sparkles": {
+      "type": "integer",
+      "default": 6,
+      "min": 0,
+      "max": 20,
+      "label": "Orbiting sparkles"
+    },
+    "orbit_radius": {
+      "type": "number",
+      "default": 110,
+      "min": 10,
+      "max": 500,
+      "label": "Orbit radius",
+      "unit": "px"
+    },
+    "orbit_spin": {
+      "type": "number",
+      "default": 180,
+      "min": 0,
+      "max": 720,
+      "label": "Orbit turn",
+      "unit": "\u00b0"
+    }
+  }
+}

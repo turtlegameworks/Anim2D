@@ -1,0 +1,55 @@
+{
+  "tool": "anim2d",
+  "tool_version": "0.16.0",
+  "generated_at": "2026-10-22T20:35:29+00:00",
+  "compatibility_profile": "spine-3.8.75",
+  "target": "Spine 3.8.75 (Pro or Essential; regions, bones, slot colour, attachment keys)",
+  "verification": {
+    "automated_structure_check": "passed",
+    "spine_editor_import": "NOT VERIFIED by this tool - follow IMPORT_IN_SPINE.md"
+  },
+  "preset": {
+    "id": "minimal_pop",
+    "version": 1,
+    "generator": "single_pop",
+    "generator_version": 1,
+    "source": "built-in"
+  },
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys"
+  ],
+  "instance_name": "fx_pop_01",
+  "animation": "fx_pop_01_play",
+  "seed": 1,
+  "duration_seconds": 0.4,
+  "delay_seconds": 0.0,
+  "settings": {
+    "primary_color": "ffffffff",
+    "secondary_color": "ffffffff",
+    "opacity": 1.0,
+    "scale": 1.0,
+    "rotation": 0.0,
+    "position_x": 0.0,
+    "position_y": 0.0,
+    "mirror": false,
+    "duration": 0.4,
+    "delay": 0.0,
+    "seed": 1,
+    "end_scale": 1.5
+  },
+  "counts": {
+    "bones": 2,
+    "slots": 1,
+    "attachments": 1,
+    "animations": 1,
+    "keys": 7
+  },
+  "warnings": [],
+  "files": {
+    "fx_pop_01.json": "03c18bed2d3daf41d8f120a1cb1b2e80e28bba0fd06c8bd4d6138107aa803c20",
+    "images/fx_pop_01/dot.png": "349906899802f80c8f62d04482b1aaef8441a71943146b65cb845c8aff017ea6"
+  }
+}

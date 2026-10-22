@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "heart_burst",
+  "version": 1,
+  "name": "Heart Burst",
+  "category": "casual",
+  "description": "Hearts pop out around a point, then float up swaying and fade: likes, lives, love.",
+  "tags": [
+    "heart",
+    "love",
+    "like",
+    "life",
+    "lives",
+    "health",
+    "casual"
+  ],
+  "generator": "heart_burst",
+  "generator_version": 1,
+  "source_duration_seconds": 1.2,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "heart": "images/heart.png",
+    "glow": "images/glow.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.2,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "ff4f78ff"
+    },
+    "secondary_color": {
+      "default": "ffb3c6ff"
+    }
+  },
+  "parameters": {
+    "hearts": {
+      "type": "integer",
+      "default": 8,
+      "min": 1,
+      "max": 30,
+      "label": "Hearts"
+    },
+    "burst_radius": {
+      "type": "number",
+      "default": 90,
+      "min": 0,
+      "max": 400,
+      "label": "Burst radius",
+      "unit": "px"
+    },
+    "rise": {
+      "type": "number",
+      "default": 160,
+      "min": 0,
+      "max": 800,
+      "label": "Rise",
+      "unit": "px"
+    },
+    "heart_size": {
+      "type": "number",
+      "default": 44,
+      "min": 10,
+      "max": 160,
+      "label": "Heart size",
+      "unit": "px"
+    },
+    "glow_size": {
+      "type": "number",
+      "default": 180,
+      "min": 0,
+      "max": 600,
+      "label": "Glow size",
+      "unit": "px",
+      "description": "0 removes the glow"
+    }
+  }
+}

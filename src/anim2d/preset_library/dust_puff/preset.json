@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "dust_puff",
+  "version": 1,
+  "name": "Dust Puff",
+  "category": "gameplay",
+  "description": "Puffs of dust kick out along the ground and rise as they fade: landings, jumps, runs, skids.",
+  "tags": [
+    "dust",
+    "puff",
+    "landing",
+    "jump",
+    "run",
+    "skid",
+    "ground",
+    "gameplay"
+  ],
+  "generator": "dust_puff",
+  "generator_version": 1,
+  "source_duration_seconds": 0.6,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "puff": "images/puff.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 0.6,
+      "min": 0.1,
+      "max": 5.0
+    },
+    "primary_color": {
+      "default": "d9cdbcff"
+    },
+    "secondary_color": {
+      "default": "ffffffff"
+    }
+  },
+  "parameters": {
+    "puffs": {
+      "type": "integer",
+      "default": 8,
+      "min": 2,
+      "max": 24,
+      "label": "Puffs"
+    },
+    "spread": {
+      "type": "number",
+      "default": 110,
+      "min": 10,
+      "max": 500,
+      "label": "Spread",
+      "unit": "px"
+    },
+    "puff_size": {
+      "type": "number",
+      "default": 70,
+      "min": 10,
+      "max": 300,
+      "label": "Puff size",
+      "unit": "px"
+    },
+    "one_side": {
+      "type": "boolean",
+      "default": false,
+      "label": "One side only",
+      "description": "Kick dust to one side (+X), as when skidding"
+    }
+  }
+}

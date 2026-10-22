@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "id": "coin_fountain",
+  "version": 1,
+  "name": "Coin Fountain",
+  "category": "reward",
+  "description": "Coins are thrown up in a fan, flip, fall back and fade: rewards and loot.",
+  "tags": [
+    "coins",
+    "gold",
+    "reward",
+    "loot",
+    "fountain",
+    "money"
+  ],
+  "generator": "particle_spray",
+  "generator_version": 1,
+  "source_duration_seconds": 1.0,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys",
+    "bezier_curves"
+  ],
+  "preview": null,
+  "images": {
+    "dot": "images/dot.png",
+    "sparkle": "images/sparkle.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 1.0,
+      "min": 0.1,
+      "max": 4.0
+    },
+    "primary_color": {
+      "default": "ffc93aff"
+    },
+    "secondary_color": {
+      "default": "fff6c8ff"
+    }
+  },
+  "parameters": {
+    "count": {
+      "type": "integer",
+      "default": 14,
+      "min": 1,
+      "max": 50,
+      "label": "Coins"
+    },
+    "spread": {
+      "type": "number",
+      "default": 70,
+      "min": 0,
+      "max": 180,
+      "label": "Spread",
+      "unit": "\u00b0",
+      "description": "Fan width around straight up"
+    },
+    "speed": {
+      "type": "number",
+      "default": 420,
+      "min": 50,
+      "max": 1200,
+      "label": "Throw height",
+      "unit": "px"
+    },
+    "gravity": {
+      "type": "number",
+      "default": 520,
+      "min": 0,
+      "max": 1500,
+      "label": "Gravity",
+      "unit": "px"
+    },
+    "piece_size": {
+      "type": "number",
+      "default": 26,
+      "min": 6,
+      "max": 80,
+      "label": "Coin size",
+      "unit": "px"
+    },
+    "sparkle_size": {
+      "type": "number",
+      "default": 120,
+      "min": 0,
+      "max": 400,
+      "label": "Sparkle size",
+      "unit": "px",
+      "description": "0 removes the sparkle"
+    }
+  }
+}
