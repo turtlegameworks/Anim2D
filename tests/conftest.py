@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 import shutil
 from pathlib import Path
 
@@ -49,3 +51,20 @@ def preset_dir(tmp_path, library):
         path.write_text(json.dumps(data), encoding="utf-8")
         return path
     return target, _edit
+
+
+# On GitHub's Windows Server runners Qt crashes while the interpreter shuts down, after every test has
+# finished, which turns a green run red. On CI, exit with pytest's own status before that teardown.
+def pytest_sessionfinish(session, exitstatus):
+    session.config.stash[_EXIT_STATUS] = int(exitstatus)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):
+    if os.environ.get("CI") and _EXIT_STATUS in config.stash:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(config.stash[_EXIT_STATUS])
+
+
+_EXIT_STATUS = pytest.StashKey[int]()
