@@ -56,7 +56,7 @@ jobs:
       # The official spine-ts runtimes and example skeletons the parity tests compare against
       # (downloaded at pinned commits and checked against SHA-256 hashes).
       - name: Cache Spine runtimes
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: tests/runtime/vendor
           key: spine-runtime-${{ hashFiles('tools/fetch_spine_runtime.py') }}
@@ -84,7 +84,7 @@ jobs:
         shell: pwsh
         run: ./tools/self_test.ps1 -Program dist/Anim2D.exe -Output selftest
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Anim2D-windows-${{ github.sha }}
           path: |
@@ -94,7 +94,7 @@ jobs:
           retention-days: 14
       - name: Upload self-test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: selftest-${{ github.sha }}
           path: selftest
