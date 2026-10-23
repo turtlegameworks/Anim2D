@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Games/Entertainment",
 ]
 dependencies = [
-    "pillow==12.3.0",
+    "pillow==13.0.0",
     "PySide6-Essentials==6.12.0",
     "PySide6-Addons==6.12.0",  # QtMultimedia: MP4 export, reference video, event audio
 ]
