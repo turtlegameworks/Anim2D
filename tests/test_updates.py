@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import io
 import json
 import socket
@@ -100,10 +101,48 @@ def test_fetch_latest_reads_the_release(github):
     assert seen[0].get_header("User-agent").startswith("Anim2D/")
 
 
-def test_portable_asset_under_its_0_16_name():
+def test_a_plain_anim2d_exe_is_not_taken_for_the_portable_download():
+    """It could be the name of the running program; only Anim2D-Portable-<version>.exe is used."""
     data = _release_json("v0.16.0")
     data["assets"][1]["name"] = "Anim2D.exe"
-    assert updates.portable_asset(updates.parse_release(data)).name == "Anim2D.exe"
+    assert updates.portable_asset(updates.parse_release(data)) is None
+
+
+def test_download_never_overwrites_the_running_program(github, tmp_path, monkeypatch):
+    monkeypatch.setattr(updates.sys, "executable", str(tmp_path / "Anim2D-Portable-0.17.0.exe"))
+    monkeypatch.setattr(updates, "cache_dir", lambda: tmp_path / "cache")
+    asset = Asset("Anim2D-Portable-0.17.0.exe", "https://example.test/portable.exe", len(PAYLOAD))
+    path = updates.download(asset, SHA, tmp_path)
+    assert path == tmp_path / "cache" / asset.name and not (tmp_path / asset.name).exists()
+
+
+class _BrokenResponse(FakeResponse):
+    def __init__(self, error):
+        super().__init__(b"")
+        self.error = error
+
+    def read(self, *args):
+        raise self.error
+
+
+@pytest.mark.parametrize("error, message", [
+    (ConnectionResetError("reset by peer"), "cut off"),
+    (http.client.IncompleteRead(b"partial"), "cut off"),
+    (TimeoutError(), "stopped answering"),
+], ids=["reset", "incomplete", "timeout"])
+def test_failures_while_reading_the_answer(github, monkeypatch, error, message):
+    monkeypatch.setattr(updates.urllib.request, "urlopen", lambda request, timeout=None: _BrokenResponse(error))
+    with pytest.raises(UpdateError, match=message):
+        updates.fetch_latest()
+
+
+def test_connection_dropped_during_download(github, tmp_path, monkeypatch):
+    monkeypatch.setattr(updates.urllib.request, "urlopen",
+                        lambda request, timeout=None: _BrokenResponse(http.client.IncompleteRead(b"x")))
+    asset = Asset("Anim2D-Setup-0.17.0.exe", "https://example.test/setup.exe", len(PAYLOAD))
+    with pytest.raises(UpdateError, match="stopped before it finished"):
+        updates.download(asset, SHA, tmp_path)
+    assert not list(tmp_path.iterdir())
 
 
 def test_assets_that_are_not_https_are_ignored():

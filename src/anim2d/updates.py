@@ -16,6 +16,7 @@ itself, and running from source only reports that a release exists.
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -116,7 +117,12 @@ def _open(url: str, accept: str, timeout: float):
 
 
 def _read_limited(response, limit: int) -> bytes:
-    data = response.read(limit + 1)
+    try:
+        data = response.read(limit + 1)
+    except (socket.timeout, TimeoutError):
+        raise UpdateError("GitHub stopped answering. Check your connection and try again.") from None
+    except (OSError, http.client.HTTPException) as exc:
+        raise UpdateError(f"The answer from GitHub was cut off ({exc}). Try again.") from None
     if len(data) > limit:
         raise UpdateError("GitHub sent an unexpectedly large answer.")
     return data
@@ -175,8 +181,7 @@ def installer_asset(release: Release) -> Asset | None:
 
 
 def portable_asset(release: Release) -> Asset | None:
-    found = next((a for n, a in release.assets.items() if PORTABLE.match(n)), None)
-    return found or release.assets.get("Anim2D.exe")  # 0.16.0 published it under this name
+    return next((a for n, a in release.assets.items() if PORTABLE.match(n)), None)
 
 
 # --- downloading ---------------------------------------------------------------------------------
@@ -213,6 +218,9 @@ def download(asset: Asset, sha256: str, folder: Path | None = None,
         raise UpdateError(f"Unexpected download name '{asset.name}'.")
     sha256 = sha256.lower()
     target = folder / asset.name
+    if os.path.normcase(str(target.resolve())) == os.path.normcase(str(Path(sys.executable).resolve())):
+        folder = cache_dir()  # never write over the program that's running
+        target = folder / asset.name
     try:
         folder.mkdir(parents=True, exist_ok=True)
         if target.is_file() and target.stat().st_size == asset.size and _sha256(target) == sha256:
@@ -243,6 +251,8 @@ def download(asset: Asset, sha256: str, folder: Path | None = None,
         os.replace(part, target)
     except (socket.timeout, TimeoutError):
         raise UpdateError("The download stalled. Check your connection and try again.") from None
+    except http.client.HTTPException:  # IncompleteRead and friends: the connection dropped
+        raise UpdateError("The download stopped before it finished. Try again.") from None
     except OSError as exc:
         raise UpdateError(f"Couldn't save the download: {exc}") from None
     finally:

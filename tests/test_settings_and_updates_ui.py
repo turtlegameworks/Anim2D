@@ -3,7 +3,6 @@ network, modal dialogs and the installer launch replaced."""
 
 from __future__ import annotations
 
-import tempfile
 import time
 from pathlib import Path
 
@@ -26,8 +25,8 @@ def qapp():
 
 
 @pytest.fixture
-def window(qapp):
-    w = EditorWindow(Document(), settings_store=QSettings(tempfile.mktemp(suffix=".ini"), QSettings.Format.IniFormat))
+def window(qapp, tmp_path):
+    w = EditorWindow(Document(), settings_store=QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat))
     yield w
     w.doc.dirty = False
     w.close()

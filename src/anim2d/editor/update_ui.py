@@ -22,6 +22,8 @@ from .. import updates
 from ..resources import APP_NAME, HOMEPAGE, VERSION
 
 STARTUP_DELAY_MS = 8000  # let the window settle before going to the network
+# Jobs emit from a pool thread; their results always run on the UI thread, which owns the signals.
+QUEUED = Qt.ConnectionType.QueuedConnection
 
 
 class _Signals(QObject):
@@ -115,14 +117,14 @@ class UpdateController(QObject):
         self.checking = True
         self.status_changed.emit(self.status())
         job = _Job(lambda _job: updates.fetch_latest())
-        job.signals.done.connect(lambda release: self._checked(release, manual))
-        job.signals.failed.connect(lambda message: self._check_failed(message, manual))
+        job.signals.done.connect(lambda release: self._checked(release, manual), QUEUED)
+        job.signals.failed.connect(lambda message: self._check_failed(message, manual), QUEUED)
         self._start(job)
 
     def _start(self, job: _Job) -> None:
         self._jobs.append(job)
-        job.signals.done.connect(lambda *_: self._finished(job))
-        job.signals.failed.connect(lambda *_: self._finished(job))
+        job.signals.done.connect(lambda *_: self._finished(job), QUEUED)
+        job.signals.failed.connect(lambda *_: self._finished(job), QUEUED)
         QThreadPool.globalInstance().start(job)
 
     def _finished(self, job: _Job) -> None:
@@ -210,9 +212,9 @@ class UpdateController(QObject):
                 QMessageBox.warning(parent, f"Updating {APP_NAME}", f"The update couldn't be downloaded.\n\n{message}")
 
         job = _Job(work)
-        job.signals.progress.connect(show_progress)
-        job.signals.done.connect(downloaded)
-        job.signals.failed.connect(failed)
+        job.signals.progress.connect(show_progress, QUEUED)
+        job.signals.done.connect(downloaded, QUEUED)
+        job.signals.failed.connect(failed, QUEUED)
         self._start(job)
 
     def _downloaded(self, release: updates.Release, path: Path, kind: str) -> None:
