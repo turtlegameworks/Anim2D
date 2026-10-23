@@ -199,10 +199,18 @@ def test_mix_preview_panel(qapp):
     panel.speed_spin.setValue(2.0)
     panel.set_time(0)
     panel.toggle_play() if not panel._timer.isActive() else None
-    import time
-    time.sleep(0.15)
-    qapp.processEvents()
+    assert panel._timer.isActive()
+
+    class Clock:  # a fixed 100 ms on the play clock, so a slow runner can't wrap the 0.5 s loop
+        def elapsed(self):
+            return 100
+
+        def restart(self):
+            pass
+
+    panel._clock = Clock()
     panel._tick()
-    assert panel.state.time > 0.2, "two times speed"
+    assert panel.state.time == pytest.approx(0.2), "two times speed"
+    panel.stop()
     other.dirty = False  # closing would otherwise ask to save (a modal dialog)
     win.close()
