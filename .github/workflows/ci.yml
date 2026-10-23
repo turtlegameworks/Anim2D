@@ -56,7 +56,7 @@ jobs:
       # The official spine-ts runtimes and example skeletons the parity tests compare against
       # (downloaded at pinned commits and checked against SHA-256 hashes).
       - name: Cache Spine runtimes
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: tests/runtime/vendor
           key: spine-runtime-${{ hashFiles('tools/fetch_spine_runtime.py') }}
