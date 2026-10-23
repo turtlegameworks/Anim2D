@@ -21,6 +21,7 @@ from ..preview.evaluator import PoseEvaluator
 from ..resources import FX_APP_NAME
 from ..resources import settings as app_settings
 from ..spine_adapters import spine38
+from .dev_badge import add_dev_badge, title_suffix
 from .preset_browser import PresetBrowser
 from .preview_widget import PreviewPanel
 from .settings_panel import SettingsPanel
@@ -34,7 +35,7 @@ WARNING_COLOR = QColor("#f0b44c")
 class MainWindow(QMainWindow):
     def __init__(self, library: PresetLibrary, settings_store: QSettings | None = None):
         super().__init__()
-        self.setWindowTitle(f"{FX_APP_NAME} {__version__} - {spine38.PROFILE_ID}")
+        self.setWindowTitle(f"{FX_APP_NAME}{title_suffix()} {__version__} - {spine38.PROFILE_ID}")
         self.library = library
         self.user_root = library.user_root or default_user_library_dir()
         self.store = settings_store or app_settings("fx")
@@ -103,6 +104,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.splitter, 1)
         layout.addWidget(bottom)
         self.setCentralWidget(central)
+        self.dev_badge = add_dev_badge(self)  # local test builds only
 
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setSingleShot(True)

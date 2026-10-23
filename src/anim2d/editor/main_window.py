@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QDockWidget, QFileDialog, QInputDialog, QLabel, Q
                                QScrollArea, QToolBar, QVBoxLayout, QWidget)
 
 from ..presets.library import PresetLibrary, default_user_library_dir
+from ..ui.dev_badge import add_dev_badge, title_suffix
 from ..ui.template_dialog import TemplateImportDialog
 from . import APP_NAME
 from ..resources import settings as app_settings
@@ -104,6 +105,7 @@ class EditorWindow(QMainWindow):
         self.update_button.clicked.connect(self._show_update)
         self.update_button.hide()
         self.statusBar().addPermanentWidget(self.update_button)
+        self.dev_badge = add_dev_badge(self)  # local test builds only: right-most in the status bar
         self.updates.available.connect(self._update_available)
         self.viewport.status.connect(self.status_label.setText)
         self.tree.insert_fx_requested.connect(self.insert_fx)
@@ -478,7 +480,7 @@ class EditorWindow(QMainWindow):
         name = doc.path.name if doc.path else "untitled"
         if len(doc.skeleton_names()) > 1:
             name += f" [{doc.skeleton_name}]"
-        self.setWindowTitle(f"{APP_NAME} - {name}{' *' if doc.dirty else ''}")
+        self.setWindowTitle(f"{APP_NAME}{title_suffix()} - {name}{' *' if doc.dirty else ''}")
         self.undo_action.setText(f"Undo {doc.undo_label()}".strip())
         self.undo_action.setEnabled(doc.can_undo)
         self.redo_action.setText(f"Redo {doc.redo_label()}".strip())

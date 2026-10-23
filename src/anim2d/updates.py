@@ -276,9 +276,13 @@ def clean_cache(keep: Path | None = None) -> None:
 # --- this copy and the hand-off ------------------------------------------------------------------
 
 def install_kind() -> str:
-    """'installed' (by the installer, so it can update itself), 'portable' or 'source'."""
+    """'installed' (by the installer, so it can update itself), 'portable', 'source', or 'dev' (a local
+    test build from tools/dev_build.py, which never updates itself)."""
     if not getattr(sys, "frozen", False):
         return "source"
+    from .resources import is_dev_build
+    if is_dev_build():
+        return "dev"
     return "installed" if (install_dir() / "install.json").is_file() else "portable"
 
 

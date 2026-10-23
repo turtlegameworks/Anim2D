@@ -49,6 +49,24 @@ Every pull request is also reviewed automatically by [CodeRabbit](https://codera
 `.coderabbit.yaml`. Treat its comments like any reviewer's: fix what's right, reply where it's wrong.
 You can talk to it in the PR with `@coderabbitai`.
 
+## Local test builds
+
+To try a change in the real program before opening a pull request:
+
+```bash
+.venv\Scripts\python tools\dev_build.py
+```
+
+This builds `dev-builds\<date>-<time>-<commit>[-dirty]\Anim2D-Dev.exe` and opens it; add `--fx` to open
+the FX Builder, or `--no-open` to only build. `--list` shows the test builds and `--clean` deletes them.
+The newest three are kept, and a post-commit hook that the script adds to your clone (it isn't part
+of the repository) deletes them all when you commit. Nothing builds automatically.
+
+A test build is separate from an installed Anim2D and can run at the same time. It's a different
+program (`Anim2D-Dev.exe`) and installs nothing. It keeps its own settings and its own FX templates
+(`Documents\Anim2D Dev Templates`), and never checks for or installs updates. It shows **DEV BUILD**
+at the bottom right with the commit it was built from, **[DEV]** in the title, and a DEV tag on its icon.
+
 ## Commit messages
 
 A short summary line in the imperative ("Fix atlas page overwrite"), a blank line, then what changed and

@@ -1,4 +1,4 @@
-"""Builds the Windows program and its installer with PyInstaller.
+r"""Builds the Windows program and its installer with PyInstaller.
 
     .venv\Scripts\python -m pip install -e .[build]
     .venv\Scripts\python tools\build_exe.py [--dist DIR]
@@ -31,15 +31,17 @@ QT_EXCLUDES = ["PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets", "PySide6
 
 
 def pyinstaller(name: str, script: Path, *, data: list[tuple[Path, str]], excludes: list[str],
-                distpath: Path) -> Path:
+                distpath: Path, icon: Path = ICON, work: Path = BUILD, log=None) -> Path:
+    """One onefile, windowed program. work holds PyInstaller's spec and work files; log, if given, is a
+    file that receives PyInstaller's output instead of the console (tools/dev_build.py)."""
     args = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--windowed",
-            "--name", name, "--icon", str(ICON), "--paths", str(ROOT / "src"),
-            "--distpath", str(distpath), "--workpath", str(BUILD / "pyinstaller" / name), "--specpath", str(BUILD)]
+            "--name", name, "--icon", str(icon), "--paths", str(ROOT / "src"),
+            "--distpath", str(distpath), "--workpath", str(work / "pyinstaller" / name), "--specpath", str(work)]
     for source, dest in data:
         args += ["--add-data", f"{source}{SEP}{dest}"]
     for module in excludes:
         args += ["--exclude-module", module]
-    subprocess.run([*args, str(script)], check=True, cwd=ROOT)
+    subprocess.run([*args, str(script)], check=True, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT if log else None)
     return distpath / f"{name}.exe"
 
 

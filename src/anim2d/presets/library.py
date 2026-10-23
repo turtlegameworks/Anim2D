@@ -35,6 +35,9 @@ def default_user_library_dir() -> Path:
     if env:
         return Path(env)
     documents = Path.home() / "Documents"
+    from ..resources import is_dev_build
+    if is_dev_build():  # local test builds never touch the real template library
+        return documents / "Anim2D Dev Templates"
     current, legacy = documents / "Anim2D Templates", documents / "Spine FX Templates"
     # Templates registered before the rename stay where they are until the new folder exists.
     return legacy if legacy.is_dir() and not current.exists() else current
