@@ -19,7 +19,7 @@ play in Spine 4.0 runtimes such as spine-unity 4.0 (or 3.8 runtimes when exporte
 | SETUP / ANIMATE (top left) | Switches mode (**Ctrl+Tab**). Each mode has its own layout; see [Setup and Animate](#setup-and-animate) |
 | Tool bar (bottom of the viewport) | **Tools** (Pose, Weights, Create), **Transform** (Rotate, Translate, Scale, Shear with their values and, in Animate mode, key buttons), **Axes**, **Compensate**, **Options**; see [Tool bar](#tool-bar). Keys: Translate **W**, Rotate **E**, Scale **R**, Shear **Q**, Pose **P**, Weights **Shift+W**, Create **C**, Select (all gizmos) **V**; any key can be changed (see [Keyboard shortcuts](#keyboard-shortcuts)) |
 | Tree (right) | The hierarchy, with search, filters, an eye column, skin marks and the **New… / Set Parent / Add to Skin / Split** buttons; see [Tree](#tree). Properties of the selection sit below it |
-| Viewport | Right/middle drag to pan, wheel to zoom, **F** to frame all. **View → Appearance…** sets the interface theme (Studio Grey, Midnight, Charcoal, Light, Ocean), the viewport background (Default, Charcoal, Slate, Mid grey, Light, Checker or any colour) and the grid (Subtle, Blueprint, High contrast, Warm, Dots, any colour, or Off), shown live and kept between sessions; **View → Grid** switches the grid quickly. The FX Preset Builder uses the same theme. ![Appearance](screenshots/editor_appearance.png) The **zoom bar** on the left has + / slider / −, 🔍 (100%) and ⛶ (fit). The selection shows a [gizmo](#gizmos). Red border = Animate mode |
+| Viewport | Right/middle drag to pan, wheel to zoom, **F** to frame all. **View → Appearance…** (the Appearance page of Settings) sets the interface theme (Studio Grey, Midnight, Charcoal, Light, Ocean), the viewport background (Default, Charcoal, Slate, Mid grey, Light, Checker or any colour) and the grid (Subtle, Blueprint, High contrast, Warm, Dots, any colour, or Off), shown live and kept between sessions; **View → Grid** switches the grid quickly. The FX Preset Builder uses the same theme. ![Appearance](screenshots/editor_appearance.png) The **zoom bar** on the left has + / slider / −, 🔍 (100%) and ⛶ (fit). The selection shows a [gizmo](#gizmos). Red border = Animate mode |
 | Weights (left, opens with the Weights tool) | See [Weights view](#weights-view) |
 | Properties (under the tree) | Edit the selection. In Animate mode, bone, slot colour and attachment changes become keys |
 | Timeline (Animate mode) | **Skin** picker (with **This skin only**: the animation list shows the chosen skin's animations, matched by name, `L1_intro` → skin `L1`, plus those of no skin; choosing a skin's animation shows that skin), animation picker, play/loop, curve presets, and a **Dopesheet** or **Graph** view (see [Animating](#animating-dopesheet-graph-and-preview)) |
@@ -405,16 +405,40 @@ The Weights tool (Shift+W) opens the **Weights** view, laid out like Spine's.
 | Unity Bridge…, Export to Unity (Ctrl+Alt+E) | See [Unity bridge](#unity-bridge) |
 | Texture Packer… (Ctrl+P) | Packs every PNG/JPEG in a folder (with subfolders) into an atlas; see [Texture Packer](#texture-packer) |
 | Texture Unpacker… | Writes every region of a `.atlas` (4.0 or 3.8) back out as its own PNG, at its original size with whitespace and rotation restored and premultiplied alpha undone. A region with an index is written as `name_<index>.png` |
-| Settings… (F12) | Recent projects count, undo levels, FPS of new skeletons, and autosave |
+| Settings… (F12) | One window with a page per topic; see [Settings](#settings) |
 
 **Autosave** (off by default) writes `<project>.anim2d.autosave` next to a saved project that has
 changes, every N minutes. The project file itself changes only when you save.
+
+## Settings
+
+**File → Settings…** (F12) opens every preference in one window, a page per topic. OK keeps the changes;
+Cancel puts Appearance back the way it was.
+
+| Page | What's on it |
+| --- | --- |
+| General | Recent projects count (and Clear recent projects), undo levels, FPS of new skeletons, autosave |
+| Appearance | Interface theme, viewport background and grid, shown live (also **View → Appearance…**) |
+| Shortcuts | Opens the keyboard shortcut editor and the list of current keys |
+| Updates | Your version, the last check, **Check now**, **Install update** when one is waiting, the daily check on or off, and stop skipping a version you skipped |
+| Plugins | The built-in integrations for now: the Unity bridge and your FX templates folder. Plugin support is planned |
+| About | Version, links to the website, bug reports and release notes, the licence, and **Copy system info** for bug reports |
+
+**Updates.** Installed copies check GitHub once a day, a few seconds after starting. When a release is
+out, a dialog shows its notes, and an **⬆ Update to …** button stays in the status bar. **Install
+update** downloads the installer, checks it against the release's SHA-256 checksums, asks to save your
+project, closes Anim2D, and the installer updates it in place, keeping the apps and shortcuts you chose,
+then starts it again. **Skip this version** stops it being offered until a newer one is out;
+**Help → Check for Updates…** always shows it. If there's no connection, the daily check stays quiet and
+Settings → Updates says what went wrong. The portable program downloads the new portable program next to
+itself instead; running from source never checks by itself.
 
 ## Keyboard shortcuts
 
 **Edit → Keyboard Shortcuts…** (Ctrl+Alt+K) lists every command with its key. Click a key and press
 the new one, or clear it; a key used twice is refused. **Reset all** restores the defaults. The
-keys are kept between sessions; **Help → Shortcuts** shows the current ones.
+keys are kept between sessions; **Help → Shortcuts** shows the current ones. The **Help** menu also has
+**Check for Updates…**, **Report a Bug…** and **About Anim2D**.
 
 **Space** (Edit → Deselect) clears the selection: bones, slots, attachments, mesh vertices and
 selected keys. In a text box Space still types a space.

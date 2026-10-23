@@ -1,21 +1,22 @@
-"""View > Appearance: interface theme, viewport background and grid, applied live while choosing."""
+"""Settings > Appearance: interface theme, viewport background and grid, applied live while choosing."""
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import (QColorDialog, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QLabel,
-                               QPushButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QColorDialog, QComboBox, QFormLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout,
+                               QWidget)
 
 from ..preview.grid import BACKGROUND_CHOICES, CHOICES as GRID_CHOICES, CUSTOM
 from .theme import THEMES
 
 
-class AppearanceDialog(QDialog):
-    """window: the EditorWindow (set_theme, set_background, set_grid and its state)."""
+class AppearancePanel(QWidget):
+    """window: the EditorWindow (set_theme, set_background, set_grid and its state). Changes apply at
+    once; revert() puts back what was set when the panel opened (the Settings dialog's Cancel)."""
 
     def __init__(self, window, parent=None):
-        super().__init__(parent or window)
-        self.setWindowTitle("Appearance")
+        super().__init__(parent)
         self.window_ = window
         st = window.state
         self.start = (window.theme_name, dict(st.background), dict(st.grid))
@@ -40,18 +41,17 @@ class AppearanceDialog(QDialog):
         form.addRow("Interface theme", self.theme)
         form.addRow("Viewport background", self._row(self.background, self.bg_color))
         form.addRow("Grid", self._row(self.grid, self.grid_color))
-        note = QLabel("Changes show at once. The theme also applies to the FX Preset Builder the next time it opens.")
+        note = QLabel("Changes show at once. The theme also applies to the FX Builder the next time it opens.")
         note.setWordWrap(True)
         note.setStyleSheet("color: #8f8f8f;")
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        reset = buttons.addButton("Defaults", QDialogButtonBox.ButtonRole.ResetRole)
-        reset.clicked.connect(self._defaults)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
+        reset = QPushButton("Restore defaults")
+        reset.clicked.connect(self.defaults)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
         layout.addWidget(note)
-        layout.addWidget(buttons)
+        layout.addWidget(reset, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addStretch(1)
         self.theme.currentTextChanged.connect(lambda name: self.window_.set_theme(name))
         self.background.currentTextChanged.connect(lambda _: self._apply_background())
         self.grid.currentTextChanged.connect(lambda _: self._apply_grid())
@@ -94,15 +94,14 @@ class AppearanceDialog(QDialog):
         self.window_.set_grid(self.grid.currentText(), self.grid_custom)
         self._paint_buttons()
 
-    def _defaults(self) -> None:
+    def defaults(self) -> None:
         from .theme import DEFAULT_THEME
         self.theme.setCurrentText(DEFAULT_THEME)
         self.background.setCurrentText("Default")
         self.grid.setCurrentText("Subtle")
 
-    def reject(self) -> None:
+    def revert(self) -> None:
         theme, background, grid = self.start
         self.window_.set_theme(theme)
         self.window_.set_background(background["name"], background.get("custom"))
         self.window_.set_grid(grid["style"], grid.get("custom"))
-        super().reject()

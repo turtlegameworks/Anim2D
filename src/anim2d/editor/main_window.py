@@ -6,8 +6,8 @@ from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSettings, Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import (QDockWidget, QFileDialog, QInputDialog, QLabel, QMainWindow, QMessageBox, QToolBar,
-                               QScrollArea, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QDockWidget, QFileDialog, QInputDialog, QLabel, QMainWindow, QMessageBox, QPushButton,
+                               QScrollArea, QToolBar, QVBoxLayout, QWidget)
 
 from ..presets.library import PresetLibrary, default_user_library_dir
 from ..ui.template_dialog import TemplateImportDialog
@@ -37,6 +37,8 @@ class EditorWindow(QMainWindow):
                  settings_store: QSettings | None = None):
         super().__init__()
         self.store = settings_store or app_settings("editor")
+        from .update_ui import UpdateController
+        self.updates = UpdateController(self, self.store)
         self.settings = EditorSettings.load(self.store)
         self.settings.apply()
         self.autosave_timer = QTimer(self)
@@ -95,6 +97,14 @@ class EditorWindow(QMainWindow):
         self.statusBar().addWidget(self.status_label, 1)
         self.validation_label = QLabel()
         self.statusBar().addPermanentWidget(self.validation_label)
+        self.update_button = QPushButton()
+        self.update_button.setFlat(True)
+        self.update_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.update_button.setToolTip("A new version of Anim2D is out: click to see what's new and install it")
+        self.update_button.clicked.connect(self._show_update)
+        self.update_button.hide()
+        self.statusBar().addPermanentWidget(self.update_button)
+        self.updates.available.connect(self._update_available)
         self.viewport.status.connect(self.status_label.setText)
         self.tree.insert_fx_requested.connect(self.insert_fx)
         self.tree.events_requested.connect(lambda: (self.events_dock.show(), self.events_dock.raise_()))
@@ -111,6 +121,7 @@ class EditorWindow(QMainWindow):
         self._apply_settings()
         self._watch_layer_files()
         self.load_reference()
+        self.updates.schedule_startup_check()
 
     # --- Setup / Animate interfaces ---------------------------------------------------------
 
@@ -337,6 +348,11 @@ class EditorWindow(QMainWindow):
         self._action(h, "Search commands…", self.search_commands, "Ctrl+Space",
                      "Find any command by typing part of its name, then press Enter")
         self._action(h, "Shortcuts", self.show_shortcuts)
+        h.addSeparator()
+        self._action(h, "Check for Updates…", lambda: self.updates.check(manual=True),
+                     tip="See whether a newer version of Anim2D is out")
+        self._action(h, "Report a Bug…", self.report_bug, tip="Open a bug report on GitHub")
+        self._action(h, f"About {APP_NAME}", lambda: self.open_settings("About"))
 
         self.mode_bar = QToolBar("Mode")
         self.mode_bar.setObjectName("Mode")
@@ -796,12 +812,13 @@ class EditorWindow(QMainWindow):
         if dialog.exec() == TextureUnpackDialog.DialogCode.Accepted:
             self.status_label.setText(f"Unpacked {len(dialog.written)} image(s)")
 
-    def open_settings(self) -> None:
-        dialog = SettingsDialog(self.settings, self, self.clear_recent)
+    def open_settings(self, page: str = "General") -> None:
+        dialog = SettingsDialog(self.settings, self, self.clear_recent, window=self, page=page)
         if dialog.exec() == SettingsDialog.DialogCode.Accepted:
             self.settings = dialog.settings()
             self.settings.save(self.store)
             self._apply_settings()
+        dialog.deleteLater()  # it's the window's child: don't keep it (and its update signals) around
 
     def _build_grid_menu(self) -> None:
         """View > Grid: five styles, a custom colour, or off. Remembered between sessions."""
@@ -942,8 +959,24 @@ class EditorWindow(QMainWindow):
             self.status_label.setText(f"Ran: {dialog.ran}")
 
     def appearance(self) -> None:
-        from .appearance_dialog import AppearanceDialog
-        AppearanceDialog(self).exec()
+        self.open_settings("Appearance")
+
+    def report_bug(self) -> None:
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from ..resources import HOMEPAGE
+        QDesktopServices.openUrl(QUrl(f"{HOMEPAGE}/issues/new/choose"))
+
+    def _update_available(self, release) -> None:
+        self.update_button.setText(f"⬆ Update to {release.version}")
+        self.update_button.show()
+
+    def _show_update(self) -> None:
+        from .update_ui import UpdateDialog
+        if self.updates.release is not None:
+            dialog = UpdateDialog(self.updates, self.updates.release, self)
+            dialog.exec()
+            dialog.deleteLater()
 
     def set_theme(self, name: str) -> None:
         """Interface theme for the whole app; remembered (the FX Preset Builder uses it too)."""

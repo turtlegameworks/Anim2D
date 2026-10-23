@@ -65,7 +65,7 @@ def test_fx_builder_preview_grid():
 
 def test_themes_backgrounds_and_appearance_dialog(tmp_path):
     app = QApplication.instance() or QApplication([])
-    from anim2d.editor.appearance_dialog import AppearanceDialog
+    from anim2d.editor.settings_dialog import SettingsDialog
     from anim2d.editor.document import Document
     from anim2d.editor.main_window import EditorWindow
     from anim2d.editor.theme import THEMES, palette, stylesheet
@@ -80,10 +80,12 @@ def test_themes_backgrounds_and_appearance_dialog(tmp_path):
     assert app.palette().window().color().name() == THEMES["Ocean"].window
     w.set_background(CUSTOM, "#204060")
     assert w.preview.state.background == {"name": CUSTOM, "custom": "#204060"}
-    dialog = AppearanceDialog(w)
-    dialog.theme.setCurrentText("Light")
-    dialog.background.setCurrentText("Light")
-    dialog.grid.setCurrentText("Dots")
+    dialog = SettingsDialog(w.settings, w, window=w, page="Appearance")
+    assert dialog.nav.currentItem().text() == "Appearance"
+    panel = dialog.appearance
+    panel.theme.setCurrentText("Light")
+    panel.background.setCurrentText("Light")
+    panel.grid.setCurrentText("Dots")
     assert w.theme_name == "Light" and w.state.background["name"] == "Light" and w.state.grid["style"] == "Dots"
     dialog.reject()  # Cancel puts everything back
     assert w.theme_name == "Ocean" and w.state.background["name"] == CUSTOM

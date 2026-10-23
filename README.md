@@ -50,16 +50,23 @@ into the Spine editor itself is a manual check).
 ## Install
 
 1. Download `Anim2D-Setup-<version>.exe` from the [latest release](https://github.com/turtlegameworks/Anim2D/releases/latest).
-2. Run it. It installs for your user only (no administrator rights) into
-   `%LOCALAPPDATA%\Programs\Anim2D` and adds Start-menu shortcuts for **Anim2D** and
-   **Anim2D FX Builder**, and desktop shortcuts if you want them.
+2. Run it and pick what you want: **Anim2D** (the editor), **Anim2D FX Builder**, or both (the default).
+   It installs for your user only, so it doesn't need administrator rights, into
+   `%LOCALAPPDATA%\Programs\Anim2D`, with Start-menu shortcuts and desktop shortcuts if you want them.
+   Running it again on a machine that has Anim2D updates that installation in place.
 
 The builds are not code-signed yet, so Windows SmartScreen may say *"Windows protected your PC"* the
 first time. Choose **More info → Run anyway**. Each release lists SHA-256 checksums in
 `SHA256SUMS.txt` if you want to verify the download.
 
+**Updates.** Anim2D checks GitHub for a new release once a day. When there is one, it tells you what's new;
+**Install update** downloads it, checks it against the release's checksums, asks you to save your work, and
+restarts on the new version. You can also skip a version, check by hand with **Help → Check for Updates…**,
+or turn the daily check off in **Settings → Updates**. The check only asks GitHub for the latest release.
+
 To uninstall, use Windows **Settings → Apps → Installed apps**, or *Uninstall Anim2D* in the Start
-menu. Your projects, FX templates (`Documents\Anim2D Templates`) and settings are kept.
+menu. Your projects are always kept. Two options, both off unless you tick them, also remove your
+settings and downloaded updates, and your FX templates (`Documents\Anim2D Templates`).
 
 Prefer not to install? Each release also has `Anim2D-Portable-<version>.exe`: one file that runs as is,
 with no shortcuts or uninstall entry. Run it with `--fx-builder` to open the FX builder.
