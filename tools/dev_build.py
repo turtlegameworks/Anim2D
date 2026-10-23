@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -38,6 +39,7 @@ WORK = BUILD / "dev"
 PROGRAM = "Anim2D-Dev"
 KEEP = 3
 HOOK_MARKER = "# anim2d dev builds"
+FOLDER = re.compile(r"^\d{8}-\d{6}-")  # the start of every build folder's name
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Anim2D"
 
 
@@ -52,24 +54,33 @@ def source_state() -> dict:
             "dirty": bool(git("status", "--porcelain", "--untracked-files=no"))}
 
 
-def builds() -> list[Path]:
-    """Test build folders, newest first."""
+def folders() -> list[Path]:
+    """Every folder this script made (finished, failed or half-deleted), newest first: found by its
+    <date>-<time>-<commit> name, so nothing it left behind is ever lost track of."""
     if not BUILDS.is_dir():
         return []
-    found = [p for p in BUILDS.iterdir() if p.is_dir() and (p / "build_info.json").is_file()]
-    return sorted(found, key=lambda p: p.name, reverse=True)
+    return sorted((p for p in BUILDS.iterdir() if p.is_dir() and FOLDER.match(p.name)),
+                  key=lambda p: p.name, reverse=True)
 
 
-def remove(folders: list[Path], quiet: bool = False) -> int:
-    """Delete build folders; one still running is skipped (Windows keeps its exe locked)."""
+def builds() -> list[Path]:
+    """Finished test builds (with their program), newest first. Failed builds don't count."""
+    return [p for p in folders() if (p / f"{PROGRAM}.exe").is_file()]
+
+
+def remove(targets: list[Path], quiet: bool = False) -> int:
+    """Delete build folders. The program goes first: if it's still running (Windows keeps it locked),
+    the folder is left whole, to be removed next time."""
     removed = 0
-    for folder in folders:
+    for folder in targets:
         try:
-            shutil.rmtree(folder)
-            removed += 1
+            (folder / f"{PROGRAM}.exe").unlink(missing_ok=True)
         except OSError:
             if not quiet:
                 print(f"  kept {folder.name}: it's still running")
+            continue
+        shutil.rmtree(folder, ignore_errors=True)
+        removed += not folder.exists()
     return removed
 
 
@@ -118,7 +129,9 @@ def install_hook(quiet: bool = False) -> None:
         text = hook.read_text(encoding="utf-8", errors="replace")
         if HOOK_MARKER in text:
             return
-        hook.write_text(text.rstrip("\n") + "\n\n" + body, encoding="utf-8")  # keep the hook that was there
+        # Ours goes first, right after the #! line, so an `exit` in the existing hook can't skip it.
+        first, _, rest = text.partition("\n") if text.startswith("#!") else ("#!/bin/sh", "", text)
+        hook.write_text(f"{first}\n{body}\n{rest}", encoding="utf-8")
     else:
         hooks.mkdir(parents=True, exist_ok=True)
         hook.write_text("#!/bin/sh\n" + body, encoding="utf-8")
@@ -151,6 +164,7 @@ def build(fx: bool, open_after: bool, keep: int) -> int:
     print(f"Building {PROGRAM} from {state['branch'] or 'detached HEAD'} @ {short}"
           f"{' with uncommitted changes' if state['dirty'] else ''}...")
     started = time.monotonic()
+    failed = False
     with open(folder / "build.log", "w", encoding="utf-8") as log:
         try:
             exe = pyinstaller(PROGRAM, launcher, data=[(PACKAGE / "preset_library", "anim2d/preset_library"),
@@ -159,10 +173,15 @@ def build(fx: bool, open_after: bool, keep: int) -> int:
                                                        (work / "anim2d" / "build_info.json", "anim2d")],
                               excludes=QT_EXCLUDES, distpath=folder, icon=icon, work=work, log=log)
         except subprocess.CalledProcessError:
-            print(f"Build failed; see {folder / 'build.log'}")
-            return 1
+            failed = True
         finally:
             shutil.rmtree(work, ignore_errors=True)
+    if failed:
+        (folder / "build_info.json").unlink(missing_ok=True)
+        marked = folder.with_name(folder.name + "-failed")
+        folder.rename(marked)
+        print(f"Build failed; see {(marked / 'build.log').relative_to(ROOT)}")
+        return 1
     print(f"Built {exe.relative_to(ROOT)} ({exe.stat().st_size / 1048576:.0f} MB) in {time.monotonic() - started:.0f} s")
 
     old = builds()[keep:]
@@ -194,14 +213,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     if args.list:
-        for folder in builds():
-            info = json.loads((folder / "build_info.json").read_text(encoding="utf-8"))
+        finished = builds()
+        for folder in folders():
+            if folder not in finished:
+                print(f"{folder.name}  (no program: failed or partly removed)")
+                continue
+            try:
+                info = json.loads((folder / "build_info.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                info = {}
             print(f"{folder.name}  {info.get('branch', '')}  built {info.get('built', '')}")
-        if not builds():
+        if not folders():
             print("No test builds.")
         return 0
     if args.clean:
-        found = builds()
+        found = folders()
         removed = remove(found, args.quiet)
         shutil.rmtree(WORK, ignore_errors=True)
         if not args.quiet:

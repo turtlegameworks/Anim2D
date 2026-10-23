@@ -122,8 +122,34 @@ def test_builds_are_listed_newest_first_and_pruned(tool):
 
 def test_clean_removes_every_build(tool, capsys):
     _fake_build(tool, "20261024-090000-aaaaaaa")
+    (tool.BUILDS / "20261024-080000-bbbbbbb-failed").mkdir()
+    (tool.BUILDS / "20261024-080000-bbbbbbb-failed" / "build.log").write_text("error")
     assert tool.main(["--clean"]) == 0
-    assert tool.builds() == [] and "Removed 1" in capsys.readouterr().out
+    assert tool.folders() == [] and "Removed 2" in capsys.readouterr().out
+
+
+def test_a_running_build_is_left_whole_and_found_again(tool, monkeypatch):
+    folder = _fake_build(tool, "20261024-090000-aaaaaaa")
+    real_unlink = Path.unlink
+
+    def locked(self, missing_ok=False):
+        if self.name == "Anim2D-Dev.exe":
+            raise PermissionError("in use")
+        return real_unlink(self, missing_ok=missing_ok)
+    monkeypatch.setattr(Path, "unlink", locked)
+    assert tool.remove([folder], quiet=True) == 0
+    assert (folder / "build_info.json").is_file() and tool.builds() == [folder], "nothing half-deleted"
+    monkeypatch.setattr(Path, "unlink", real_unlink)
+    assert tool.remove(tool.folders()) == 1 and not folder.exists()
+
+
+def test_failed_builds_do_not_count_as_builds(tool):
+    good = _fake_build(tool, "20261024-090000-aaaaaaa")
+    failed = tool.BUILDS / "20261024-100000-bbbbbbb-failed"
+    failed.mkdir()
+    (failed / "build.log").write_text("error")
+    assert tool.builds() == [good], "only finished builds count towards --keep"
+    assert tool.folders() == [failed, good]
 
 
 def test_hook_is_installed_once_and_keeps_an_existing_hook(tool, tmp_path, monkeypatch):
@@ -134,10 +160,12 @@ def test_hook_is_installed_once_and_keeps_an_existing_hook(tool, tmp_path, monke
     assert text.startswith("#!/bin/sh") and "dev_build.py --clean --quiet" in text
     tool.install_hook(quiet=True)
     assert (hooks / "post-commit").read_text() == text, "not added twice"
-    (hooks / "post-commit").write_text("#!/bin/sh\necho mine\n")
+    (hooks / "post-commit").write_text("#!/bin/sh\necho mine\nexit 0\n")
     tool.install_hook(quiet=True)
     text = (hooks / "post-commit").read_text()
     assert "echo mine" in text and text.count(tool.HOOK_MARKER) == 1
+    assert text.startswith("#!/bin/sh\n") and text.index("dev_build.py --clean") < text.index("exit 0"), \
+        "runs before the existing hook can exit"
 
 
 def test_dev_icon_has_every_size(tool, tmp_path):
