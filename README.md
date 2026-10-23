@@ -61,8 +61,8 @@ first time. Choose **More info → Run anyway**. Each release lists SHA-256 chec
 To uninstall, use Windows **Settings → Apps → Installed apps**, or *Uninstall Anim2D* in the Start
 menu. Your projects, FX templates (`Documents\Anim2D Templates`) and settings are kept.
 
-There's also a portable `Anim2D.exe` on each release: one file, nothing installed.
-`Anim2D.exe --fx-builder` opens the FX builder.
+Prefer not to install? Each release also has `Anim2D-Portable-<version>.exe`: one file that runs as is,
+with no shortcuts or uninstall entry. Run it with `--fx-builder` to open the FX builder.
 
 macOS and Linux builds aren't available yet. Running from source (below) may work there, but only
 Windows is tested.

@@ -3,6 +3,11 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
+## Unreleased
+
+* Releases name the portable program `Anim2D-Portable-<version>.exe`, so it's easy to tell apart from
+  the installer, and write `SHA256SUMS.txt` with LF line endings so `sha256sum -c` works everywhere.
+
 ## 0.16.0 (2026-10-23)
 
 First public release, under the MIT License.

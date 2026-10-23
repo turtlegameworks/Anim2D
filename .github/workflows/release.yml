@@ -46,6 +46,10 @@ jobs:
       - name: Self-test the built program
         shell: pwsh
         run: ./tools/self_test.ps1 -Program dist/Anim2D.exe -Output selftest
+      # Published next to the installer, so the two are easy to tell apart in the release's assets.
+      - name: Name the portable program
+        shell: pwsh
+        run: Move-Item dist/Anim2D.exe "dist/Anim2D-Portable-$env:VERSION.exe"
       - name: Checksums
         shell: pwsh
         run: |
@@ -61,5 +65,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ github.ref_name }}" `
-            "dist/Anim2D-Setup-$env:VERSION.exe" dist/Anim2D.exe dist/SHA256SUMS.txt `
+            "dist/Anim2D-Setup-$env:VERSION.exe" "dist/Anim2D-Portable-$env:VERSION.exe" dist/SHA256SUMS.txt `
             --title "Anim2D $env:VERSION" --generate-notes --verify-tag
