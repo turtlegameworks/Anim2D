@@ -13,6 +13,8 @@ APP_NAME = "Anim2D"
 FX_APP_NAME = "Anim2D FX Builder"
 ORGANIZATION = "Anim2D"
 VERSION = __version__
+REPOSITORY = "turtlegameworks/Anim2D"  # GitHub owner/name: releases, issues, update checks
+HOMEPAGE = f"https://github.com/{REPOSITORY}"
 
 # (new application name, (old organization, old application)) for QSettings
 _SETTINGS = {

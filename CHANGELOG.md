@@ -5,8 +5,28 @@ minor versions may change file formats, but older files keep opening.
 
 ## Unreleased
 
+### Added
+
+* **Settings** is one window with pages: General, Appearance, Shortcuts, Updates, Plugins and About.
+  View → Appearance… opens its Appearance page.
+* **Updates.** A daily check for new releases, Help → Check for Updates…, and one-click install: the update is
+  verified against the release's checksums, Anim2D asks to save, then restarts on the new version. Versions
+  can be skipped, and the daily check turned off. The portable program downloads the new one next to itself.
+* **Installer.** Choose Anim2D, the FX Builder or both. Pages for welcome, options, progress and finish;
+  updating an existing installation keeps its folder and choices; files still in use are retried, with a
+  Retry button instead of an error. The uninstaller can also remove your settings and downloaded updates, and
+  your FX templates (both off by default). Projects are never removed.
+* Help → Report a Bug… and About Anim2D.
+
+### Changed
+
 * Releases name the portable program `Anim2D-Portable-<version>.exe`, so it's easy to tell apart from
   the installer, and write `SHA256SUMS.txt` with LF line endings so `sha256sum -c` works everywhere.
+
+### Fixed
+
+* The uninstaller left itself (`Uninstall Anim2D.exe`) behind, and installing again into that folder was
+  refused.
 
 ## 0.16.0 (2026-10-23)
 
