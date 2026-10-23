@@ -3,7 +3,9 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
-## Unreleased
+## 0.17.0 (2026-10-24)
+
+The first version that can update itself: from here on, new releases install with one click.
 
 ### Added
 
@@ -17,6 +19,8 @@ minor versions may change file formats, but older files keep opening.
   Retry button instead of an error. The uninstaller can also remove your settings and downloaded updates, and
   your FX templates (both off by default). Projects are never removed.
 * Help → Report a Bug… and About Anim2D.
+* For contributors: `tools/dev_build.py` makes local test builds (`Anim2D-Dev.exe`), kept apart from an
+  installed Anim2D and labelled DEV BUILD; see CONTRIBUTING.md.
 
 ### Changed
 
