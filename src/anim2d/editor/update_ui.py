@@ -106,7 +106,7 @@ class UpdateController(QObject):
     def schedule_startup_check(self) -> None:
         """A check a few seconds after start, at most once a day, for installed and portable builds
         (running from source or under tests never goes to the network by itself)."""
-        if self.auto_check and updates.install_kind() != "source" and \
+        if self.auto_check and updates.install_kind() not in ("source", "dev") and \
                 updates.check_due(self.store.value("updates/last_check")):
             # self as context: the timer is dropped if the window closes first
             QTimer.singleShot(STARTUP_DELAY_MS, self, lambda: self.check(manual=False))
@@ -164,7 +164,7 @@ class UpdateController(QObject):
         parent = parent or self.window
         kind = updates.install_kind()
         asset = updates.installer_asset(release) if kind == "installed" else updates.portable_asset(release)
-        if kind == "source" or asset is None:
+        if kind in ("source", "dev") or asset is None:
             self.open_page(release)
             return
         if kind == "installed" and not self.window._confirm_discard():  # save or discard before closing
@@ -284,14 +284,15 @@ class UpdateDialog(QDialog):
             "portable": "This is the portable program, so the new version is downloaded next to it for you to "
                         "start instead.",
             "source": "You're running from source: update with git pull, or download a release.",
+            "dev": "This is a local test build, which never updates itself. Install the release to try it.",
         }[kind])
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #8f8f8f;")
         buttons = QDialogButtonBox()
-        main_text = {"installed": "Install update", "portable": "Download", "source": "Open release page"}[kind]
+        main_text = {"installed": "Install update", "portable": "Download"}.get(kind, "Open release page")
         main = buttons.addButton(main_text, QDialogButtonBox.ButtonRole.AcceptRole)
         main.setDefault(True)
-        if kind != "source":
+        if kind not in ("source", "dev"):
             page = buttons.addButton("Release page", QDialogButtonBox.ButtonRole.HelpRole)
             page.clicked.connect(lambda: controller.open_page(release))
         skip = QPushButton("Skip this version")

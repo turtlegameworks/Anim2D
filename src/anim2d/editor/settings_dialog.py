@@ -183,7 +183,7 @@ class SettingsDialog(QDialog):
         kind = updates.install_kind()
         self.auto_check = QCheckBox("Check for updates automatically (once a day)")
         self.auto_check.setChecked(controller.auto_check)
-        if kind == "source":
+        if kind in ("source", "dev"):
             self.auto_check.setEnabled(False)
             self.auto_check.setToolTip("Automatic checks only run in the installed or portable program")
         self.update_status = QLabel(controller.status())
@@ -192,7 +192,7 @@ class SettingsDialog(QDialog):
         check = QPushButton("Check now")
         check.clicked.connect(lambda: controller.check(manual=True))
         install = QPushButton("Install update…" if kind == "installed" else "Download update…")
-        install.setVisible(controller.release is not None and kind != "source")
+        install.setVisible(controller.release is not None and kind not in ("source", "dev"))
         install.clicked.connect(self._install_update)
         self.update_install = install
         self.update_kind = kind
@@ -207,6 +207,8 @@ class SettingsDialog(QDialog):
                          "work before it restarts.",
             "portable": "This is the portable program: a new version is downloaded next to it for you to start "
                         "instead. Install Anim2D to get one-click updates.",
+            "dev": "This is a local test build: it never checks or updates by itself, and never touches the "
+                   "installed Anim2D. Check now still tells you about new releases.",
             "source": "You're running from source, so there are no automatic checks. Check now still tells you "
                       "about new releases; update with git pull.",
         }[kind]
@@ -218,7 +220,7 @@ class SettingsDialog(QDialog):
         self.update_status.setText(text)
 
     def _update_available(self, _release) -> None:
-        self.update_install.setVisible(self.update_kind != "source")
+        self.update_install.setVisible(self.update_kind not in ("source", "dev"))
 
     def _install_update(self) -> None:
         controller = self.window_.updates

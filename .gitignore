@@ -16,6 +16,8 @@ tests/runtime/vendor/
 build/
 dist/
 *.spec
+# Local test builds (tools/dev_build.py)
+dev-builds/
 
 # Generated packages and local runs
 output/
