@@ -194,9 +194,9 @@ def user_data(setup, tmp_path, monkeypatch):
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, f"Software\\{key}\\Anim2D") as k:
         winreg.SetValueEx(k, "theme", 0, winreg.REG_SZ, "Ocean")
     monkeypatch.setattr(setup, "SETTINGS_KEYS", [(f"{key}\\Anim2D", key)])
-    cache = tmp_path / "LocalAppData" / "Anim2D"
-    (cache / "updates").mkdir(parents=True)
-    (cache / "updates" / "Anim2D-Setup-0.17.0.exe").write_bytes(b"x")
+    cache = tmp_path / "LocalAppData" / "Anim2D" / "updates"
+    cache.mkdir(parents=True)
+    (cache / "Anim2D-Setup-0.17.0.exe").write_bytes(b"x")
     monkeypatch.setattr(setup, "update_cache", lambda: cache)
     templates = tmp_path / "Documents" / "Anim2D Templates"
     (templates / "my_hit").mkdir(parents=True)
@@ -231,7 +231,7 @@ def test_uninstall_can_remove_settings_and_downloads(setup, user_data):
     _install(setup)
     setup.uninstall(setup.test_paths["target"], remove_settings=True)
     assert not _key_exists(user_data["key"]), "the settings key and its now-empty parent are gone"
-    assert not user_data["cache"].exists()
+    assert not user_data["cache"].exists() and not user_data["cache"].parent.exists(), "empty parent tidied"
     assert user_data["templates"].is_dir() and user_data["project"].is_file()
 
 
@@ -240,6 +240,13 @@ def test_uninstall_can_delete_templates_too(setup, user_data):
     setup.uninstall(setup.test_paths["target"], remove_settings=True, remove_templates=True)
     assert not user_data["templates"].exists()
     assert user_data["project"].is_file(), "projects are never touched"
+
+
+def test_only_the_updates_folder_is_removed(setup, user_data):
+    other = user_data["cache"].parent / "something_else.txt"
+    other.write_text("not downloaded updates")
+    setup.remove_user_data(settings=True, templates=False)
+    assert not user_data["cache"].exists() and other.is_file()
 
 
 def test_failed_data_removal_can_be_retried(setup, user_data, monkeypatch):

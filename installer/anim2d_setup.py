@@ -140,8 +140,8 @@ def manifest_apps(manifest: dict | None) -> list[str]:
 
 
 def update_cache() -> Path:
-    """%LOCALAPPDATA%/Anim2D: downloaded updates (anim2d.updates.cache_dir)."""
-    return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME
+    """%LOCALAPPDATA%/Anim2D/updates: downloaded updates (the same folder as anim2d.updates.cache_dir)."""
+    return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME / "updates"
 
 
 def template_folders() -> list[Path]:
@@ -258,6 +258,10 @@ def remove_user_data(settings: bool, templates: bool) -> list[str]:
             except OSError as exc:
                 raise SetupError(f"Could not remove {cache}: {exc}") from None
             removed.append(str(cache))
+        try:
+            cache.parent.rmdir()  # %LOCALAPPDATA%/Anim2D, only if nothing else is in it
+        except OSError:
+            pass
     if templates:
         for folder in template_folders():
             if folder.exists():
