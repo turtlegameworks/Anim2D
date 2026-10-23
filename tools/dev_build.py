@@ -39,7 +39,9 @@ WORK = BUILD / "dev"
 PROGRAM = "Anim2D-Dev"
 KEEP = 3
 HOOK_MARKER = "# anim2d dev builds"
-FOLDER = re.compile(r"^\d{8}-\d{6}-")  # the start of every build folder's name
+# The whole name of a folder build() makes: <date>-<time>-<commit or nogit>[-dirty][-failed]
+FOLDER = re.compile(r"^\d{8}-\d{6}-(?:[0-9a-f]{7,40}|nogit)(?:-dirty)?(?:-failed)?$")
+PREVIOUS_HOOK = "post-commit.before-anim2d"  # a hook the clone already had, still run by ours
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Anim2D"
 
 
@@ -124,17 +126,17 @@ def install_hook(quiet: bool = False) -> None:
     hooks = hooks if hooks.is_absolute() else ROOT / hooks
     hook = hooks / "post-commit"
     python = Path(sys.executable).as_posix()
-    body = f'{HOOK_MARKER}: a commit makes the local test builds out of date\n"{python}" tools/dev_build.py --clean --quiet || true\n'
+    body = (f'#!/bin/sh\n{HOOK_MARKER}: a commit makes the local test builds out of date\n'
+            f'"{python}" tools/dev_build.py --clean --quiet || true\n')
     if hook.is_file():
-        text = hook.read_text(encoding="utf-8", errors="replace")
-        if HOOK_MARKER in text:
+        if HOOK_MARKER in hook.read_text(encoding="utf-8", errors="replace"):
             return
-        # Ours goes first, right after the #! line, so an `exit` in the existing hook can't skip it.
-        first, _, rest = text.partition("\n") if text.startswith("#!") else ("#!/bin/sh", "", text)
-        hook.write_text(f"{first}\n{body}\n{rest}", encoding="utf-8")
-    else:
-        hooks.mkdir(parents=True, exist_ok=True)
-        hook.write_text("#!/bin/sh\n" + body, encoding="utf-8")
+        # A hook can be any program (sh, Python, ...): leave it as it is, under another name, and have ours
+        # run it afterwards with the same arguments, so neither can stop the other.
+        hook.replace(hooks / PREVIOUS_HOOK)
+        body += f'# then the post-commit hook this clone had before\nexec "$(dirname "$0")/{PREVIOUS_HOOK}" "$@"\n'
+    hooks.mkdir(parents=True, exist_ok=True)
+    hook.write_text(body, encoding="utf-8")
     if not quiet:
         print(f"Installed {hook.relative_to(ROOT) if hook.is_relative_to(ROOT) else hook}: test builds are "
               "deleted when you commit")

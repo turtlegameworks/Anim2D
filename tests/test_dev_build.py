@@ -160,12 +160,26 @@ def test_hook_is_installed_once_and_keeps_an_existing_hook(tool, tmp_path, monke
     assert text.startswith("#!/bin/sh") and "dev_build.py --clean --quiet" in text
     tool.install_hook(quiet=True)
     assert (hooks / "post-commit").read_text() == text, "not added twice"
-    (hooks / "post-commit").write_text("#!/bin/sh\necho mine\nexit 0\n")
+    mine = "#!/usr/bin/env python\nimport sys\nsys.exit(0)\n"  # any language, any exit
+    (hooks / "post-commit").write_text(mine)
     tool.install_hook(quiet=True)
     text = (hooks / "post-commit").read_text()
-    assert "echo mine" in text and text.count(tool.HOOK_MARKER) == 1
-    assert text.startswith("#!/bin/sh\n") and text.index("dev_build.py --clean") < text.index("exit 0"), \
-        "runs before the existing hook can exit"
+    assert (hooks / tool.PREVIOUS_HOOK).read_text() == mine, "the existing hook is kept exactly as it was"
+    assert text.startswith("#!/bin/sh\n") and text.count(tool.HOOK_MARKER) == 1
+    assert text.index("dev_build.py --clean") < text.index(f'exec "$(dirname "$0")/{tool.PREVIOUS_HOOK}" "$@"'), \
+        "cleans up first, then runs the existing hook"
+    tool.install_hook(quiet=True)
+    assert (hooks / "post-commit").read_text() == text and (hooks / tool.PREVIOUS_HOOK).read_text() == mine
+
+
+@pytest.mark.parametrize("name, ours", [
+    ("20261024-090000-abc1234", True), ("20261024-090000-abc1234-dirty", True),
+    ("20261024-090000-abc1234-dirty-failed", True), ("20261024-090000-nogit-failed", True),
+    ("20261024-080000-backup", False), ("20261024-080000-abc1234-old", False), ("my stuff", False),
+])
+def test_only_folders_it_made_are_cleaned(tool, name, ours):
+    (tool.BUILDS / name).mkdir(parents=True)
+    assert (tool.BUILDS / name in tool.folders()) is ours
 
 
 def test_dev_icon_has_every_size(tool, tmp_path):
