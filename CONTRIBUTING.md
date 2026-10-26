@@ -7,9 +7,9 @@ of any size are welcome: bug reports, docs fixes, new FX presets, features.
 
 * Open an issue first for anything bigger than a small fix, so we can agree on the approach.
 * Keep a pull request to one change. Behaviour fixes and pure refactors or renames go in separate PRs.
-* Never commit files you don't have the right to share: Spine example projects, client or game art,
-  licensed fonts. Tests that need such files read their location from an environment variable and skip
-  when it isn't set (see `tests/test_spine_project.py`).
+* Never commit files you don't have the right to share: example projects from other tools, client or
+  game art, licensed fonts. Tests that need such files read their location from an environment variable
+  and skip when it isn't set.
 * Be kind. Disagreement about code is fine; disrespect for people isn't.
 
 ## Set up
@@ -41,8 +41,6 @@ What reviewers look for:
   written outside the folder the user chose, and edits that say they can be undone really can be.
 * **Readable errors.** Expected failures raise `EditorError` / `PresetError` with a message a user can
   act on, not a traceback.
-* **Spine compatibility.** Exports must still load in the official runtimes (the parity tests check
-  this). Don't change binary or JSON output to work around a test.
 * **Match the surrounding code.** Same naming, comment style and structure as the module you touch.
 
 Every pull request is also reviewed automatically by [CodeRabbit](https://coderabbit.ai), configured in

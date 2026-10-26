@@ -366,7 +366,7 @@ The Weights tool (Shift+W) opens the **Weights** view, laid out like Spine's.
 
 | Tool | Where | What it does |
 | --- | --- | --- |
-| Draw-order keys | Tree slot menu in Animate mode (Draw earlier/later/back/front — key) | Keys the draw order at the current time; the draw-order group shows the animated order |
+| Draw-order keys | Tree slot menu in Animate mode (Draw earlier/later/back/front, then key) | Keys the draw order at the current time; the draw-order group shows the animated order |
 | Events | Tree event menu → Open the Events window (View → Events) | Events with int/float/string/audio/volume/balance defaults; keys at the current time, edited in place. **🔊 Audio folder…** sets where audio paths are found (default: an `audio` folder next to the images); **▶ Play sound** tries one |
 | Event sounds | 🔊 next to Loop in the Timeline and Preview | Events with an audio path play their sound (WAV, MP3, OGG) when the playhead passes them; key volume overrides the event's. Balance is kept but not heard |
 | Image sequences | Tree slot menu → Add image sequence… | Numbered images (`fire_01.png` …) become attachments keyed as a flip-book: frame rate, forward/reverse/ping-pong, repeats, keep or hide the last frame |

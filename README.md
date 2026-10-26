@@ -4,7 +4,7 @@
 
 # Anim2D
 
-**A free, open-source 2D skeletal animation editor and FX builder that reads and writes Spine data.**
+**A free, open-source 2D skeletal animation editor and FX builder for Windows.**
 
 [![CI](https://github.com/turtlegameworks/Anim2D/actions/workflows/ci.yml/badge.svg)](https://github.com/turtlegameworks/Anim2D/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/turtlegameworks/Anim2D?include_prereleases)](https://github.com/turtlegameworks/Anim2D/releases)
@@ -18,9 +18,9 @@
 ![Anim2D editor](docs/screenshots/editor_editor.png)
 
 Anim2D lets you rig and animate 2D characters with bones, meshes and constraints, then export them for
-the official [Spine runtimes](https://esotericsoftware.com/spine-runtimes) (Unity, Godot, Cocos, Phaser,
-Pixi, libGDX and more). It also comes with an FX builder that turns 37 ready-made effects into editable
-skeletons you can tweak, insert into a character, or take into the Spine editor.
+major game engines and runtimes (Unity, Godot, Cocos, Phaser, Pixi, libGDX and more). It also comes
+with an FX builder that turns 37 ready-made effects into editable skeletons you can tweak, insert into
+a character, or export straight into your project.
 
 It is a single Windows program with two modes:
 
@@ -35,17 +35,13 @@ It is a single Windows program with two modes:
 
 | | |
 | --- | --- |
-| **Spine interchange** | Opens Spine 3.8 and 4.0 JSON and `.spine` projects (3.8.x, 4.2.x). Exports Spine 4.0 JSON or binary `.skel`, or 3.8 JSON, with an optional packed `.atlas` |
+| **File formats** | Opens skeletal animation JSON and binary project files across established format versions. Exports JSON or binary `.skel` with an optional packed `.atlas` |
 | **Rigging** | Bones with shear and inheritance, slots, draw order, skins with their own bones and constraints, IK, transform and path constraints, bounding boxes, clipping, points |
 | **Meshes** | Mesh editing and tracing from alpha, weight painting, a Spine-style weights view, linked meshes, deform keys |
 | **Animation** | Dopesheet and bezier graph editor, ease presets, retiming, motion paths, onion skinning, crossfade preview, events with audio, reference footage for rotoscoping |
 | **Tools** | Auto-rig, physics baking, mirror, pose tools, frame sequences, PSD / OpenRaster import with live resync, command search, customisable shortcuts, themes |
 | **Export** | Texture packer and unpacker, GIF, APNG, WebP, MP4, AVI, MOV, PSD and PNG / JPEG sequences, plus a Unity bridge that exports straight into a spine-unity project |
 | **FX** | 37 parametric presets ([catalogue](docs/fx_presets.md)), your own templates registered from Spine exports ([round trip](docs/template_round_trip.md)), deterministic seeded generation |
-
-Exports are checked against the official spine-ts runtimes in the test suite. See
-[compatibility](docs/compatibility.md) for exactly what is and isn't verified yet (for example, import
-into the Spine editor itself is a manual check).
 
 ## Install
 
@@ -124,10 +120,9 @@ to write your own presets.
 .venv\Scripts\python -m pytest
 ```
 
-`fetch_spine_runtime.py` downloads Esoteric's spine-ts runtimes and example skeletons at pinned commits
-(checked against SHA-256 hashes) for the parity tests; without Node.js or that step, those tests are
-skipped. Tests that need `.spine` projects which can't be shipped here run only if you point
-`ANIM2D_SPINE_EXAMPLES` at Spine's examples folder or `ANIM2D_SPINE_PROJECTS` at your own projects.
+`fetch_spine_runtime.py` downloads pinned runtime fixtures for the format-parity tests; without Node.js
+or that step, those tests are skipped. Some tests look for project files you already have locally and
+skip if they are not available (see `ANIM2D_SPINE_EXAMPLES` and `ANIM2D_SPINE_PROJECTS`).
 
 ### Build the Windows program
 
@@ -145,12 +140,12 @@ publishes a release.
 ```text
 src/anim2d/
   editor/          the editor: document model, viewport, panels, timeline, tools, exporters
-  formats/         Spine 3.8 / 4.0 JSON, 4.0 binary, atlas packer, .spine project reader
+  formats/         skeletal animation formats, atlas packer, project file reader
   preview/         pose evaluator, constraint solver, mesh and Qt renderer
   generation/      FX generators and registry
   models/          FX effect model, parameters, presets, settings and variants
   presets/         preset library discovery
-  spine_adapters/  Spine 3.8 serializer for FX packages
+  spine_adapters/  format adapters for FX package export
   templates/       registering Spine exports as FX templates
   packaging/       FX package and engine export
   validation/      output checks
@@ -167,16 +162,10 @@ docs/              guides, compatibility record, audit, screenshots
 ## Contributing
 
 Bug reports, ideas and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md). Every
-pull request gets CI and an automated [CodeRabbit](https://coderabbit.ai) review. Known gaps are listed
-in the [October 2026 audit](docs/audit-2026-10.md) and in the issues. To report a security problem, see
-[SECURITY.md](SECURITY.md).
+pull request gets CI and an automated [CodeRabbit](https://coderabbit.ai) review. Known gaps are tracked
+in the issues. To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## License
 
 Anim2D is released under the [MIT License](LICENSE). The presets' art is original and covered by the
 same licence.
-
-*Spine is a trademark of Esoteric Software LLC. Anim2D is an independent project, not affiliated with or
-endorsed by Esoteric Software. It reads and writes the Spine data formats so your work can be used with
-the Spine runtimes. Using those runtimes in your own product is subject to the
-[Spine Runtimes License](https://esotericsoftware.com/spine-runtimes-license).*
