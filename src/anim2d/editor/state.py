@@ -89,7 +89,8 @@ class EditorState(QObject):
         self.mode = "setup"
         if doc.edit_skin == "default":
             def _has_attachments(skin_name: str) -> bool:
-                return any(doc.skin_data(skin_name).get("attachments", {}).values())
+                skin = next((s for s in doc.data["skins"] if s["name"] == skin_name), None)
+                return skin is not None and any(skin.get("attachments", {}).values())
             if not _has_attachments("default"):
                 for skin in doc.skin_names():
                     if skin != "default" and _has_attachments(skin):
