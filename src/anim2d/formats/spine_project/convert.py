@@ -18,6 +18,21 @@ def nm(v):
     return T(v.get(1)) if isinstance(v, dict) else v
 
 
+def anim_name(a):
+    """Full path of an animation, following its folder hierarchy (mirrors skin_name)."""
+    path = [nm(a)]
+    folder = T(a.get(7)) if isinstance(a, dict) else None
+    seen: set[int] = set()
+    while isinstance(folder, dict) and T(folder.get(1)):
+        fid = id(folder)
+        if fid in seen:
+            raise ValueError(f"cycle in folder hierarchy for animation '{path[-1]}'")
+        seen.add(fid)
+        path.insert(0, T(folder[1]))
+        folder = T(folder.get(3))
+    return "/".join(str(p) for p in path if p is not None)
+
+
 def lst(v):
     return [T(x) for x in (T(v) or [])]
 
@@ -338,6 +353,8 @@ def convert(project, version):
 
     anims = {}
     for a in (lst(sk.get(7)) if not version.startswith("4.") else []):
+        if isinstance(a, dict) and a.get("_class") in ("Obj6c", "Folder"):
+            continue
         ja = {}
         for g in lst(a.get(2)):
             target = T(g.get(1))
@@ -394,7 +411,10 @@ def convert(project, version):
                                 e["offset"] = nz[0]
                             e["vertices"] = [r4(x) for x in values[nz[0]:nz[-1] + 1]]
                     elif kind == "drawOrder":
-                        offs = [{"slot": nm(T(o)[0]), "offset": zigzag(T(o)[1])} for o in lst(k.get(0xf))]
+                        offs_map = {}
+                        for o in lst(k.get(0xf)):
+                            offs_map[nm(T(o)[0])] = zigzag(T(o)[1])
+                        offs = [{"slot": s, "offset": v} for s, v in offs_map.items()]
                         if offs:
                             e["offsets"] = offs
                     elif kind == "event":
@@ -442,7 +462,7 @@ def convert(project, version):
                     ja.setdefault("events", []).extend(jk)
         if "events" in ja:
             ja["events"].sort(key=lambda e: e.get("time", 0))
-        anims[nm(a)] = ja
+        anims[anim_name(a)] = ja
     out["animations"] = anims
     if version.startswith("4."):
         out["_animations40"] = anims42(sk, fps, nm, lst, T, deform_layout, skin_of)
@@ -479,10 +499,12 @@ def anims42(sk, fps, nm, lst, T, deform_layout, skin_of):
     """Spine 4.2 animations -> Spine 4.0 JSON animations (per-channel bezier curves kept exactly)."""
     out, notes = {}, []
     for a in lst(sk.get(7)):
-        name = nm(a)
+        if isinstance(a, dict) and a.get("_class") in ("Obj6c", "Folder"):
+            continue
+        name = anim_name(a)
         n = 2
         while name in out:
-            name = f"{nm(a)} {n}"
+            name = f"{anim_name(a)} {n}"
             n += 1
         ja = {}
         for g in lst(a.get(2)):
@@ -574,8 +596,10 @@ def anims42(sk, fps, nm, lst, T, deform_layout, skin_of):
                     jk = []
                     for k in keys:
                         e = {"time": round(k["time"] / fps, 6)} if k["time"] else {}
-                        offs = [{"slot": nm(T(o)[0]), "offset": (T(o)[1] >> 1) ^ -(T(o)[1] & 1)}
-                                for o in (T(k.get("offsets")) or [])]
+                        offs_map = {}
+                        for o in (T(k.get("offsets")) or []):
+                            offs_map[nm(T(o)[0])] = (T(o)[1] >> 1) ^ -(T(o)[1] & 1)
+                        offs = [{"slot": s, "offset": v} for s, v in offs_map.items()]
                         if offs:
                             e["offsets"] = offs
                         jk.append(e)
