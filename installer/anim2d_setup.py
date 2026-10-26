@@ -141,7 +141,7 @@ def manifest_apps(manifest: dict | None) -> list[str]:
 
 # The app's own folders and the user's templates, as anim2d.paths lays them out (it can't be imported here).
 def _local_app_data() -> Path:
-    return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME
+    return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / APP_NAME
 
 
 def update_cache() -> Path:
@@ -177,7 +177,11 @@ def documents() -> Path:
 def template_folders() -> list[Path]:
     """The user's FX templates: Documents/Anim2D/FX Templates, and the folders used before 0.17.1."""
     docs = documents()
-    return [docs / APP_NAME / "FX Templates", docs / "Anim2D Templates", docs / "Spine FX Templates"]
+    folders = [docs / APP_NAME / "FX Templates", docs / "Anim2D Templates", docs / "Spine FX Templates"]
+    legacy_docs = Path.home() / "Documents"
+    if legacy_docs != docs:
+        folders += [legacy_docs / "Anim2D Templates", legacy_docs / "Spine FX Templates"]
+    return folders
 
 
 def find_existing() -> Path | None:
@@ -271,6 +275,22 @@ def _remove_tree(folder: Path) -> None:
         shutil.rmtree(folder)
 
 
+def _remove_owned_logs(folder: Path) -> None:
+    """Delete only the log files Anim2D wrote; remove the folder only when empty afterwards."""
+    if folder.is_symlink() or (hasattr(folder, "is_junction") and folder.is_junction()):
+        return
+    if not folder.is_dir():
+        return
+    for name in ("anim2d.log", "anim2d.log.1", "anim2d.log.2", "anim2d.log.3"):
+        p = folder / name
+        if p.is_file() or p.is_symlink():
+            p.unlink()
+    try:
+        folder.rmdir()
+    except OSError:
+        pass
+
+
 def remove_user_data(settings: bool, templates: bool) -> list[str]:
     """Delete the app's settings and update downloads and/or the user's FX templates. Returns what was
     removed, for the summary. Projects and generated FX packages are never touched."""
@@ -281,13 +301,20 @@ def remove_user_data(settings: bool, templates: bool) -> list[str]:
             if parent:
                 _delete_empty_registry_key(parent)
         removed.append("settings")
-        for folder in (update_cache(), logs_folder()):
-            if folder.exists():
-                try:
-                    _remove_tree(folder)
-                except OSError as exc:
-                    raise SetupError(f"Could not remove {folder}: {exc}") from None
-                removed.append(str(folder))
+        folder = update_cache()
+        if folder.exists():
+            try:
+                _remove_tree(folder)
+            except OSError as exc:
+                raise SetupError(f"Could not remove {folder}: {exc}") from None
+            removed.append(str(folder))
+        folder = logs_folder()
+        if folder.exists():
+            try:
+                _remove_owned_logs(folder)
+            except OSError as exc:
+                raise SetupError(f"Could not remove {folder}: {exc}") from None
+            removed.append(str(folder))
         try:
             update_cache().parent.rmdir()  # %LOCALAPPDATA%/Anim2D, only if nothing else is in it
         except OSError:

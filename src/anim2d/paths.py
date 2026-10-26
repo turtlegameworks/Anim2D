@@ -92,9 +92,11 @@ def logs_dir() -> Path:
 def legacy_folders() -> dict[Path, list[Path]]:
     """Folders from before 0.17.1, by the folder that replaces them (most recent name first)."""
     docs = documents()
+    home_docs = Path.home() / "Documents"
+    roots = [docs] if docs == home_docs else [docs, home_docs]
     if _dev():
-        return {templates_dir(): [docs / "Anim2D Dev Templates"]}
-    return {templates_dir(): [docs / "Anim2D Templates", docs / "Spine FX Templates"],
+        return {templates_dir(): [r / "Anim2D Dev Templates" for r in roots]}
+    return {templates_dir(): [r / name for r in roots for name in ("Anim2D Templates", "Spine FX Templates")],
             fx_output_dir(): [docs / "Anim2D FX Output"]}
 
 
