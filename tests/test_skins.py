@@ -216,3 +216,45 @@ def test_animations_follow_their_skin(qapp=None):
     assert len(win.timeline.listed_animations()) == 6
     d.dirty = False
     win.close()
+
+
+def test_opening_skin_auto_switch():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    from anim2d.editor.state import EditorState
+    QApplication.instance() or QApplication([])
+
+    # default skin is empty, L1 has an attachment → auto-switch to L1
+    d = Document()
+    d.add_slot("root", "body")
+    d.add_skin("L1")
+    d.set_edit_skin("L1")
+    d.skin.setdefault("body", {})["img"] = {"width": 40, "height": 40}
+    d.edit_skin = "default"  # simulate import: starts at default
+    state = EditorState()
+    state.set_document(d)
+    assert d.edit_skin == "L1", "auto-switches to first skin with attachments"
+
+    # default skin has real attachments → no switch
+    d2 = Document()
+    d2.add_slot("root", "body")
+    d2.skin["body"]["img"] = {"width": 40, "height": 40}  # real attachment on default skin
+    d2.add_skin("L1")
+    state.set_document(d2)
+    assert d2.edit_skin == "default", "default has attachments, stays on default"
+
+    # only the default skin exists → no switch
+    d3 = Document()
+    state.set_document(d3)
+    assert d3.edit_skin == "default", "no non-default skin to switch to"
+
+    # two non-default skins, first has no attachments, second does → switches to second
+    d4 = Document()
+    d4.add_slot("root", "body")
+    d4.add_skin("empty")
+    d4.add_skin("L2")
+    d4.set_edit_skin("L2")
+    d4.skin.setdefault("body", {})["img"] = {"width": 40, "height": 40}
+    d4.edit_skin = "default"
+    state.set_document(d4)
+    assert d4.edit_skin == "L2", "skips empty skins, picks first with attachments"

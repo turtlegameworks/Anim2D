@@ -87,6 +87,14 @@ class EditorState(QObject):
         self.pose_overrides = {}
         self.selection = Selection()
         self.mode = "setup"
+        if doc.edit_skin == "default":
+            def _has_attachments(skin_name: str) -> bool:
+                return any(doc.skin_data(skin_name).get("attachments", {}).values())
+            if not _has_attachments("default"):
+                for skin in doc.skin_names():
+                    if skin != "default" and _has_attachments(skin):
+                        doc.edit_skin = skin
+                        break
         self.document_changed.emit()
         self.selection_changed.emit()
         self.mode_changed.emit()
