@@ -8,8 +8,8 @@ updates/skipped (a version the user chose to skip), updates/last_error.
 
 from __future__ import annotations
 
+import logging
 import os
-import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QLabel, QMessageBox, Q
 from .. import updates
 from ..resources import APP_NAME, HOMEPAGE, VERSION
 
+log = logging.getLogger(__name__)
 STARTUP_DELAY_MS = 8000  # let the window settle before going to the network
 # Jobs emit from a pool thread; their results always run on the UI thread, which owns the signals.
 QUEUED = Qt.ConnectionType.QueuedConnection
@@ -47,7 +48,7 @@ class _Job(QRunnable):
             self.signals.failed.emit(str(exc))
             return
         except Exception as exc:  # never let a bug in the update check take the editor down
-            traceback.print_exc()
+            log.exception("update job failed")
             self.signals.failed.emit(f"Unexpected problem: {type(exc).__name__}: {exc}")
             return
         self.signals.done.emit(result)

@@ -198,6 +198,10 @@ def user_data(setup, tmp_path, monkeypatch):
     cache.mkdir(parents=True)
     (cache / "Anim2D-Setup-0.17.0.exe").write_bytes(b"x")
     monkeypatch.setattr(setup, "update_cache", lambda: cache)
+    logs = cache.parent / "logs"
+    logs.mkdir()
+    (logs / "anim2d.log").write_text("log")
+    monkeypatch.setattr(setup, "logs_folder", lambda: logs)
     templates = tmp_path / "Documents" / "Anim2D Templates"
     (templates / "my_hit").mkdir(parents=True)
     (templates / "my_hit" / "preset.json").write_text("{}")
@@ -231,7 +235,7 @@ def test_uninstall_can_remove_settings_and_downloads(setup, user_data):
     _install(setup)
     setup.uninstall(setup.test_paths["target"], remove_settings=True)
     assert not _key_exists(user_data["key"]), "the settings key and its now-empty parent are gone"
-    assert not user_data["cache"].exists() and not user_data["cache"].parent.exists(), "empty parent tidied"
+    assert not user_data["cache"].exists() and not user_data["cache"].parent.exists(), "logs too; parent tidied"
     assert user_data["templates"].is_dir() and user_data["project"].is_file()
 
 

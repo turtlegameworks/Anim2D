@@ -187,8 +187,8 @@ def portable_asset(release: Release) -> Asset | None:
 # --- downloading ---------------------------------------------------------------------------------
 
 def cache_dir() -> Path:
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    return Path(base) / "Anim2D" / "updates"
+    from .paths import updates_dir
+    return updates_dir()
 
 
 def _sha256(path: Path) -> str:

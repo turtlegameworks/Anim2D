@@ -15,6 +15,10 @@ from .ui.main_window import MainWindow
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName(FX_APP_NAME)
+    from . import logs, paths
+    logs.setup("fx")
+    logs.install_error_handler()
+    paths.migrate()
     from .editor.theme import apply_theme, saved_theme
     apply_theme(app, saved_theme("Midnight"))  # the editor's theme; Midnight until one is chosen
     apply_app_icon(app)

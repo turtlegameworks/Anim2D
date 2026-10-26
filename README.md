@@ -60,9 +60,14 @@ first time. Choose **More info → Run anyway**. Each release lists SHA-256 chec
 restarts on the new version. You can also skip a version, check by hand with **Help → Check for Updates…**,
 or turn the daily check off in **Settings → Updates**. The check only asks GitHub for the latest release.
 
+**Where things go.** Your work is in `Documents\Anim2D`: `Projects` (where saving starts), `FX Templates`
+and `FX Output`. Anim2D's own files are in `%LOCALAPPDATA%\Anim2D`: downloaded updates and `logs\anim2d.log`,
+which is worth attaching to a bug report. Settings → General lists them all with an Open button. Settings
+themselves are kept in the registry (`HKEY_CURRENT_USER\Software\Anim2D`).
+
 To uninstall, use Windows **Settings → Apps → Installed apps**, or *Uninstall Anim2D* in the Start
 menu. Your projects are always kept. Two options, both off unless you tick them, also remove your
-settings and downloaded updates, and your FX templates (`Documents\Anim2D Templates`).
+settings, downloaded updates and logs, and your FX templates.
 
 Prefer not to install? Each release also has `Anim2D-Portable-<version>.exe`: one file that runs as is,
 with no shortcuts or uninstall entry. Run it with `--fx-builder` to open the FX builder.

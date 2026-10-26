@@ -163,7 +163,37 @@ class SettingsDialog(QDialog):
         return _page(section("General"), form,
                      _note("Autosave writes <project>.anim2d.autosave next to a saved project that has changes; "
                            "the project file itself is only written when you save."),
-                     _buttons_row(clear))
+                     _buttons_row(clear),
+                     section("Folders"), self._folders(),
+                     _note("Your work is kept in Documents\\Anim2D, and Anim2D's own files (downloaded updates, "
+                           "the log) in your AppData folder. Uninstalling never removes your projects."))
+
+    def _folders(self) -> QWidget:
+        """Where things are, each with a button that opens it."""
+        from .. import paths
+        from ..presets.library import default_user_library_dir
+        rows = (("Projects", paths.projects_dir(), "Where Save Project and Open Project start"),
+                ("FX templates", default_user_library_dir(), "Templates you registered from Spine exports"),
+                ("FX output", paths.current(paths.fx_output_dir()), "Where the FX Builder writes packages at first"),
+                ("Logs", paths.logs_dir(), "anim2d.log: attach it to a bug report"))
+        form = QFormLayout()
+        for name, folder, tip in rows:
+            path = QLabel(str(folder))
+            path.setStyleSheet(MUTED)
+            path.setToolTip(tip)
+            path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            button = QPushButton("Open")
+            button.setToolTip(f"Open {folder} in File Explorer")
+            button.clicked.connect(lambda _=False, f=folder: self._open_folder(f))
+            line = QWidget()
+            row = QHBoxLayout(line)
+            row.setContentsMargins(0, 0, 0, 0)
+            row.addWidget(path, 1)
+            row.addWidget(button)
+            form.addRow(f"{name}:", line)
+        holder = QWidget()
+        holder.setLayout(form)
+        return holder
 
     def _shortcuts(self) -> QWidget:
         window = self.window_
@@ -268,9 +298,14 @@ class SettingsDialog(QDialog):
         row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(icon)
         row.addWidget(title, 1)
+        from .. import logs
         self.system_info = (f"{APP_NAME} {VERSION}\nWindows {platform.version()} ({platform.machine()})\n"
                             f"Python {platform.python_version()} · Qt {qVersion()} · PySide6 {pyside_version}\n"
-                            f"{'Built program' if getattr(sys, 'frozen', False) else 'From source'}")
+                            f"{'Built program' if getattr(sys, 'frozen', False) else 'From source'}\n"
+                            f"Log: {logs.log_file()}")
+        log_folder = QPushButton("Open log folder")
+        log_folder.setToolTip("anim2d.log records what happened, to attach to a bug report")
+        log_folder.clicked.connect(lambda: self._open_folder(logs.log_file().parent))
         copy = QPushButton("Copy system info")
         copy.setToolTip("Versions to paste into a bug report")
         copy.clicked.connect(lambda: (QGuiApplication.clipboard().setText(self.system_info),
@@ -280,7 +315,8 @@ class SettingsDialog(QDialog):
                             "writes Spine data."),
                      _buttons_row(_link_button("Website", HOMEPAGE),
                                   _link_button("Report a bug", f"{HOMEPAGE}/issues/new/choose"),
-                                  _link_button("Release notes", f"{HOMEPAGE}/releases"), copy),
+                                  _link_button("Release notes", f"{HOMEPAGE}/releases")),
+                     _buttons_row(copy, log_folder),
                      section("Licence"),
                      _note(f'Released under the <a href="{HOMEPAGE}/blob/main/LICENSE">MIT License</a>. '
                            "Built with Qt for Python (PySide6, LGPL) and Pillow."),
