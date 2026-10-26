@@ -22,7 +22,12 @@ def anim_name(a):
     """Full path of an animation, following its folder hierarchy (mirrors skin_name)."""
     path = [nm(a)]
     folder = T(a.get(7)) if isinstance(a, dict) else None
+    seen: set[int] = set()
     while isinstance(folder, dict) and T(folder.get(1)):
+        fid = id(folder)
+        if fid in seen:
+            raise ValueError(f"cycle in folder hierarchy for animation '{path[-1]}'")
+        seen.add(fid)
         path.insert(0, T(folder[1]))
         folder = T(folder.get(3))
     return "/".join(str(p) for p in path if p is not None)
