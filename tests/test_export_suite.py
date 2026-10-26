@@ -387,12 +387,12 @@ def test_file_menu_recent_settings_autosave(qapp, rig, tmp_path):
     from anim2d.editor import document
     rig.dirty = False
     win = EditorWindow(rig, settings_store=_store(tmp_path))
-    texts = [a.text() for a in win.menuBar().actions()[0].menu().actions() if a.text()]
+    texts = [a.text().replace("&", "") for a in win.menuBar().actions()[0].menu().actions() if a.text()]
     for wanted in ("New Project", "Open Project…", "Recent Projects", "Save Project", "Save Project As…",
                    "New Skeleton", "Import Project…", "Import Data…", "Export…", "Texture Packer…",
                    "Texture Unpacker…", "Settings…"):
         assert any(t.endswith(wanted) for t in texts), wanted
-    shortcuts = {a.text().split(" ", 1)[-1]: a.shortcut().toString() for a in win.menuBar().actions()[0].menu().actions()}
+    shortcuts = {a.text().replace("&", ""): a.shortcut().toString() for a in win.menuBar().actions()[0].menu().actions()}
     assert shortcuts["New Project"] == "Ctrl+Shift+N" and shortcuts["New Skeleton"] == "Ctrl+N"
     assert shortcuts["Export…"] == "Ctrl+E" and shortcuts["Texture Packer…"] == "Ctrl+P"
     assert shortcuts["Settings…"] == "F12"

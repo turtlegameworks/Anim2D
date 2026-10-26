@@ -139,15 +139,45 @@ def manifest_apps(manifest: dict | None) -> list[str]:
     return chosen or list(APPS)
 
 
+# The app's own folders and the user's templates, as anim2d.paths lays them out (it can't be imported here).
+def _local_app_data() -> Path:
+    return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME
+
+
 def update_cache() -> Path:
-    """%LOCALAPPDATA%/Anim2D/updates: downloaded updates (the same folder as anim2d.updates.cache_dir)."""
-    return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME / "updates"
+    """%LOCALAPPDATA%/Anim2D/updates: downloaded updates (anim2d.paths.updates_dir)."""
+    return _local_app_data() / "updates"
+
+
+def logs_folder() -> Path:
+    """%LOCALAPPDATA%/Anim2D/logs: anim2d.log (anim2d.paths.logs_dir)."""
+    return _local_app_data() / "logs"
+
+
+def documents() -> Path:
+    """The user's Documents folder as Windows has it (anim2d.paths.documents), OneDrive redirection included."""
+    if hasattr(ctypes, "windll"):
+        from ctypes import wintypes
+
+        class GUID(ctypes.Structure):
+            _fields_ = [("Data1", wintypes.DWORD), ("Data2", wintypes.WORD), ("Data3", wintypes.WORD),
+                        ("Data4", ctypes.c_ubyte * 8)]
+
+        guid = GUID()
+        ctypes.windll.ole32.CLSIDFromString("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", ctypes.byref(guid))
+        found = ctypes.c_wchar_p()
+        if ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(guid), 0, None, ctypes.byref(found)) == 0:
+            try:
+                return Path(found.value)
+            finally:
+                ctypes.windll.ole32.CoTaskMemFree(found)
+    return Path.home() / "Documents"
 
 
 def template_folders() -> list[Path]:
-    """The user's FX template library (as anim2d.presets.library finds it), old name included."""
-    documents = Path.home() / "Documents"
-    return [documents / "Anim2D Templates", documents / "Spine FX Templates"]
+    """The user's FX templates: Documents/Anim2D/FX Templates, and the folders used before 0.17.1."""
+    docs = documents()
+    return [docs / APP_NAME / "FX Templates", docs / "Anim2D Templates", docs / "Spine FX Templates"]
 
 
 def find_existing() -> Path | None:
@@ -251,15 +281,15 @@ def remove_user_data(settings: bool, templates: bool) -> list[str]:
             if parent:
                 _delete_empty_registry_key(parent)
         removed.append("settings")
-        cache = update_cache()
-        if cache.exists():
-            try:
-                _remove_tree(cache)
-            except OSError as exc:
-                raise SetupError(f"Could not remove {cache}: {exc}") from None
-            removed.append(str(cache))
+        for folder in (update_cache(), logs_folder()):
+            if folder.exists():
+                try:
+                    _remove_tree(folder)
+                except OSError as exc:
+                    raise SetupError(f"Could not remove {folder}: {exc}") from None
+                removed.append(str(folder))
         try:
-            cache.parent.rmdir()  # %LOCALAPPDATA%/Anim2D, only if nothing else is in it
+            update_cache().parent.rmdir()  # %LOCALAPPDATA%/Anim2D, only if nothing else is in it
         except OSError:
             pass
     if templates:
@@ -544,7 +574,7 @@ def _uninstall_wizard() -> int:
     settings, templates = tk.BooleanVar(value=False), tk.BooleanVar(value=False)
     ttk.Checkbutton(body, text="Also remove my settings and downloaded updates", variable=settings).pack(
         anchor="w", pady=(14, 0))
-    ttk.Label(body, style="Muted.TLabel", text="Theme, recent projects, shortcuts, window layout, update "
+    ttk.Label(body, style="Muted.TLabel", text="Theme, recent projects, shortcuts, window layout, logs, update "
               "downloads").pack(anchor="w", padx=(22, 0))
     ttk.Checkbutton(body, text="Also delete my FX templates", variable=templates).pack(anchor="w", pady=(8, 0))
     ttk.Label(body, style="Muted.TLabel", text=f"{template_folders()[0]}: templates you registered from Spine "

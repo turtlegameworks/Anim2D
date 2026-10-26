@@ -43,8 +43,9 @@ def test_dev_build_keeps_its_own_settings_and_templates(dev, monkeypatch, tmp_pa
     assert store.organizationName() == "Anim2D-Dev" and store.applicationName() == "Anim2D"
     monkeypatch.delenv("ANIM2D_USER_LIBRARY", raising=False)
     monkeypatch.delenv("SPINE_FX_USER_LIBRARY", raising=False)
-    monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    assert default_user_library_dir() == tmp_path / "Documents" / "Anim2D Dev Templates"
+    from anim2d import paths
+    assert default_user_library_dir() == tmp_path / "Documents" / "Anim2D Dev" / "FX Templates"
+    assert paths.app_data().name == "Anim2D-Dev" and paths.updates_dir().parent == paths.app_data()
 
 
 def test_dev_build_never_updates_itself(dev, qapp, monkeypatch, tmp_path):

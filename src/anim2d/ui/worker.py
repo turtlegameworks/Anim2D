@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import traceback
+import logging
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, Signal
@@ -10,6 +10,9 @@ from PySide6.QtCore import QObject, QRunnable, Signal
 from ..models.preset import PresetDefinition
 from ..models.settings import EffectSettings
 from ..packaging.package import GenerationResult, write_package
+
+
+log = logging.getLogger(__name__)
 
 
 class WorkerSignals(QObject):
@@ -29,7 +32,7 @@ class GenerateJob(QRunnable):
         try:
             result: GenerationResult = write_package(self.preset, self.settings, self.destination)
         except Exception as exc:  # report, never crash the UI
-            traceback.print_exc()
+            log.exception("generating %s failed", self.preset.id)
             self.signals.failed.emit(f"{type(exc).__name__}: {exc}")
             return
         self.signals.finished.emit(result)

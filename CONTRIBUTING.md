@@ -64,7 +64,7 @@ of the repository) deletes them all when you commit. Nothing builds automaticall
 
 A test build is separate from an installed Anim2D and can run at the same time. It's a different
 program (`Anim2D-Dev.exe`) and installs nothing. It keeps its own settings and its own FX templates
-(`Documents\Anim2D Dev Templates`), and never checks for or installs updates. It shows **DEV BUILD**
+and folders (`Documents\Anim2D Dev`, `%LOCALAPPDATA%\Anim2D-Dev`), and never checks for or installs updates. It shows **DEV BUILD**
 at the bottom right with the commit it was built from, **[DEV]** in the title, and a DEV tag on its icon.
 
 ## Commit messages

@@ -16,9 +16,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture(autouse=True)
 def isolated_user_library(tmp_path, monkeypatch):
-    """Keep tests away from the real ~/Documents/Anim2D Templates."""
+    """Keep tests away from the real Documents (templates, projects, FX output) and AppData (updates, logs)."""
     path = tmp_path / "user_templates"
     monkeypatch.setenv("ANIM2D_USER_LIBRARY", str(path))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+    from anim2d import paths
+    monkeypatch.setattr(paths, "documents", lambda: tmp_path / "Documents")
     return path
 
 

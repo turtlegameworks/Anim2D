@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QStandardPaths, Qt, QThreadPool, QTimer, QUrl
+from PySide6.QtCore import QSettings, Qt, QThreadPool, QTimer, QUrl
 from PySide6.QtGui import QColor, QDesktopServices, QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMainWindow,
                                QMessageBox, QProgressBar, QPushButton, QSplitter, QVBoxLayout, QWidget)
@@ -21,6 +21,7 @@ from ..preview.evaluator import PoseEvaluator
 from ..resources import FX_APP_NAME
 from ..resources import settings as app_settings
 from ..spine_adapters import spine38
+from .. import paths
 from .dev_badge import add_dev_badge, title_suffix
 from .preset_browser import PresetBrowser
 from .preview_widget import PreviewPanel
@@ -46,8 +47,12 @@ class MainWindow(QMainWindow):
         self._job: GenerateJob | None = None
         self._ready = False
 
-        default_out = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)) / "Anim2D FX Output"
-        self.output_dir = Path(str(self.store.value("output_dir", str(default_out))))
+        default_out = paths.current(paths.fx_output_dir())
+        saved = self.store.value("output_dir")
+        # A folder remembered from before 0.17.1 may have been moved to Documents\Anim2D (paths.migrate).
+        moved = saved and not Path(str(saved)).exists() and \
+            any(Path(str(saved)) == old for old in paths.legacy_folders().get(paths.fx_output_dir(), []))
+        self.output_dir = Path(str(saved)) if saved and not moved else default_out
 
         favorites = self.store.value("favorites", [], type=list) or []
         self.browser = PresetBrowser(library, [str(f) for f in favorites])
