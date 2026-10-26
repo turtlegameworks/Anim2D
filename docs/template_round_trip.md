@@ -51,7 +51,7 @@ keys; slot colour, two-colour and attachment keys; deform keys; draw order keys;
 
 ## Where templates live
 
-`Documents\Anim2D Templates\<template id>\` (open it with **Open templates folder**). Each template
+`Documents\Anim2D\FX Templates\<template id>\` (open it with **Open templates folder**). Each template
 folder holds `preset.json`, `template.json` (your Spine data with the instance prefix removed),
 `template_meta.json` (tint roles, source file) and `images\`.
 

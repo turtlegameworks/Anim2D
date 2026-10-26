@@ -8,6 +8,34 @@ from PySide6.QtWidgets import (QDialog, QHBoxLayout, QHeaderView, QKeySequenceEd
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 PREFIX = "shortcuts/"
+# Commands that were renamed: a key someone set under the old name carries over to the new one.
+RENAMED = {"Exit": "Quit", "Open FX Builder": "Open FX Preset Builder"}
+
+
+def add_access_keys(menu) -> None:
+    """Give every command in a menu (and its submenus) an access key, the underlined letter that picks
+    it with the keyboard: the first letter of a word that no other command in that menu uses yet, else
+    any free letter. Labels that already have one keep it."""
+    if menu is None:
+        return
+    actions = [a for a in menu.actions() if not a.isSeparator() and a.text()]
+    used = {_key(a.text()) for a in actions if _key(a.text())}
+    for action in actions:
+        text = action.text()
+        if _key(text) is None:
+            words = [i for i, ch in enumerate(text) if ch.isalnum() and (i == 0 or not text[i - 1].isalnum())]
+            letters = [i for i, ch in enumerate(text) if ch.isalnum()]
+            spot = next((i for i in words + letters if text[i].lower() not in used), None)
+            if spot is not None:
+                used.add(text[spot].lower())
+                action.setText(text[:spot] + "&" + text[spot:])
+        add_access_keys(action.menu())
+
+
+def _key(text: str) -> str | None:
+    """The access key of a label ('&Save' -> 's'), ignoring '&&' (a literal ampersand)."""
+    i = text.replace("&&", "\0\0").find("&")
+    return text[i + 1].lower() if 0 <= i < len(text) - 1 else None
 
 
 class ShortcutRegistry:
@@ -20,6 +48,11 @@ class ShortcutRegistry:
     def add(self, command: str, action: QAction, default: str) -> None:
         self.entries[command] = (action, default)
         saved = self.store.value(PREFIX + command)
+        old = RENAMED.get(command)
+        if saved is None and old and self.store.value(PREFIX + old) is not None:
+            saved = self.store.value(PREFIX + old)
+            self.store.setValue(PREFIX + command, saved)
+            self.store.remove(PREFIX + old)
         action.setShortcut(QKeySequence(str(saved) if saved is not None else default))
 
     def key(self, command: str) -> str:

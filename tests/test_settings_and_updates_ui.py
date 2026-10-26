@@ -83,7 +83,7 @@ def test_view_appearance_and_help_about_open_their_pages(window, monkeypatch):
     window.open_settings("About")
     assert opened == ["Appearance", "About"]
     help_menu = window.menuBar().actions()[-1].menu()
-    names = [a.text() for a in help_menu.actions() if a.text()]
+    names = [a.text().replace("&", "") for a in help_menu.actions() if a.text()]
     assert {"Check for Updates…", "Report a Bug…", "About Anim2D"} <= set(names)
 
 
@@ -224,3 +224,23 @@ def test_portable_copy_downloads_next_to_itself(window, monkeypatch, tmp_path):
     window.updates.install(_release())
     _wait(lambda: shown)
     assert folders == [("Anim2D-Portable-99.0.0.exe", tmp_path)] and "Anim2D-Portable-99.0.0.exe" in shown[0]
+
+
+# --- menus follow the Windows conventions
+
+def test_every_menu_command_has_its_own_access_key(window):
+    for top in window.menuBar().actions():
+        labels = [a.text() for a in top.menu().actions() if not a.isSeparator() and a.text()]
+        keys = [t[t.index("&") + 1].lower() for t in labels if "&" in t]
+        assert len(keys) == len(labels) and len(set(keys)) == len(keys), top.text()
+    file_menu = [a.text() for a in window.menuBar().actions()[0].menu().actions() if a.text()]
+    assert "E&xit" in file_menu and "Save Project &As…" in file_menu, "the usual Windows letters"
+    assert all(t.replace("&", "")[:1].isascii() for t in file_menu), "no emoji in menu labels"
+
+
+def test_renamed_commands_keep_a_custom_shortcut(qapp, tmp_path):
+    store = QSettings(str(tmp_path / "keys.ini"), QSettings.Format.IniFormat)
+    store.setValue("shortcuts/Quit", "Ctrl+Q")  # set before 'Quit' became 'Exit'
+    w = EditorWindow(Document(), settings_store=store)
+    assert w.shortcuts.key("Exit") == "Ctrl+Q" and store.value("shortcuts/Quit") is None
+    w.close()

@@ -65,6 +65,7 @@ class ParamEditor(QWidget):
             layout.addWidget(self.spin)
         elif spec.type == "boolean":
             self.check = QCheckBox()
+            self.check.setAccessibleName(spec.label)  # its label sits beside it, in the form
             self.check.toggled.connect(lambda v: self._emit(v, False))
             layout.addWidget(self.check)
             layout.addStretch(1)
@@ -191,8 +192,8 @@ class SettingsPanel(QWidget):
         self.output_edit = QLineEdit()
         self.output_edit.setReadOnly(True)
         browse = QToolButton()
-        browse.setText("…")
-        browse.setToolTip("Choose output folder")
+        browse.setText("Browse…")
+        browse.setToolTip("Choose the folder packages are written to")
         browse.clicked.connect(self.browse_output.emit)
         out_row = QHBoxLayout()
         out_row.addWidget(self.output_edit, 1)

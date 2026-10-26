@@ -417,7 +417,7 @@ Cancel puts Appearance back the way it was.
 
 | Page | What's on it |
 | --- | --- |
-| General | Recent projects count (and Clear recent projects), undo levels, FPS of new skeletons, autosave |
+| General | Recent projects count (and Clear recent projects), undo levels, FPS of new skeletons, autosave, and **Folders**: where projects, FX templates, FX output and the log are, each with an Open button |
 | Appearance | Interface theme, viewport background and grid, shown live (also **View → Appearance…**) |
 | Shortcuts | Opens the keyboard shortcut editor and the list of current keys |
 | Updates | Your version, the last check, **Check now**, **Install update** when one is waiting, the daily check on or off, and stop skipping a version you skipped |

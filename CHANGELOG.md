@@ -3,6 +3,26 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
+## 0.17.1 (2026-10-24)
+
+### Changed
+
+* **Your work has one home: `Documents\Anim2D`**, with `Projects`, `FX Templates` and `FX Output` in it.
+  Saving and opening start in `Projects`. The folders 0.17.0 and earlier used (`Documents\Anim2D Templates`,
+  `Documents\Anim2D FX Output`) are moved there once, never merged into a folder that already exists.
+  Documents is found the way Windows has it, so a Documents folder redirected to OneDrive works.
+* Anim2D's own files are in `%LOCALAPPDATA%\Anim2D`: downloaded updates and the new log.
+* Menus follow the Windows conventions: every command has an access key (Alt, then the underlined
+  letter), File → Exit instead of Quit, and no emoji in menu labels. Shortcuts you set keep working.
+* Browse buttons say Browse… instead of "…"; FX → Open FX Builder had its old name.
+
+### Added
+
+* **A log**, `%LOCALAPPDATA%\Anim2D\logs\anim2d.log`, and a message box for errors nothing else caught,
+  with **Open log folder** and **Copy details**, instead of the program doing nothing.
+* Settings → General → **Folders**, and About → **Open log folder**.
+* After an update, the status bar says **Updated to x.y.z · What's new**, linking to the release notes.
+
 ## 0.17.0 (2026-10-24)
 
 The first version that can update itself: from here on, new releases install with one click.

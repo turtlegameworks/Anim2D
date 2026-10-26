@@ -20,7 +20,7 @@ from .fx_dialog import InsertFxDialog
 from .preview_panel import PreviewPanel
 from .properties import PropertiesPanel
 from .settings_dialog import EditorSettings, SettingsDialog
-from .shortcuts_dialog import ShortcutRegistry, ShortcutsDialog
+from .shortcuts_dialog import ShortcutRegistry, ShortcutsDialog, add_access_keys
 from .state import EditorState
 from .timeline import TimelinePanel
 from .tool_panel import TOOLS, ModeSwitch, ToolPanel
@@ -105,6 +105,7 @@ class EditorWindow(QMainWindow):
         self.update_button.clicked.connect(self._show_update)
         self.update_button.hide()
         self.statusBar().addPermanentWidget(self.update_button)
+        self.updated_button = self._updated_note()
         self.dev_badge = add_dev_badge(self)  # local test builds only: right-most in the status bar
         self.updates.available.connect(self._update_available)
         self.viewport.status.connect(self.status_label.setText)
@@ -220,7 +221,7 @@ class EditorWindow(QMainWindow):
         action = QAction(text, self)
         if isinstance(shortcut, QKeySequence.StandardKey):
             shortcut = QKeySequence(shortcut).toString(QKeySequence.SequenceFormat.PortableText)
-        command = " ".join(w for w in text.replace("…", "").split() if w.isascii())
+        command = " ".join(w for w in text.replace("…", "").replace("&", "").split() if w.isascii())
         self.shortcuts.add(command.strip(), action, shortcut or "")
         if tip:
             action.setStatusTip(tip)
@@ -239,41 +240,41 @@ class EditorWindow(QMainWindow):
         self.timeline.graph_requested.connect(lambda: (self.graph_dock.show(), self.graph_dock.raise_()))
         bar = self.menuBar()
         f = bar.addMenu("&File")  # laid out like Spine's File menu
-        self._action(f, "📄 New Project", self.new_project, "Ctrl+Shift+N")
-        self._action(f, "📂 Open Project…", self.open_project, QKeySequence.StandardKey.Open)
-        self.recent_menu = f.addMenu("🕘 Recent Projects")
+        self._action(f, "New Project", self.new_project, "Ctrl+Shift+N")
+        self._action(f, "Open Project…", self.open_project, QKeySequence.StandardKey.Open)
+        self.recent_menu = f.addMenu("Recent Projects")
         self.recent_menu.aboutToShow.connect(self._fill_recent)
-        self._action(f, "💾 Save Project", self.save, QKeySequence.StandardKey.Save)
-        self._action(f, "💾 Save Project As…", self.save_as, "Ctrl+Shift+S")
+        self._action(f, "Save Project", self.save, QKeySequence.StandardKey.Save)
+        self._action(f, "Save Project &As…", self.save_as, "Ctrl+Shift+S")
         f.addSeparator()
-        self._action(f, "🦴 New Skeleton", self.new_skeleton, "Ctrl+N",
+        self._action(f, "New Skeleton", self.new_skeleton, "Ctrl+N",
                      "Start an empty skeleton that uses the same images folder")
-        self.skeletons_menu = f.addMenu("🦴 Skeletons in project")
+        self.skeletons_menu = f.addMenu("Skeletons in project")
         self.skeletons_menu.aboutToShow.connect(self._fill_skeletons_menu)
         f.addSeparator()
-        self._action(f, "📥 Import Project…", self.import_spine,
+        self._action(f, "Import Project…", self.import_spine,
                      tip="Open a Spine project (.spine, 3.8 or 4.2) or a Spine JSON export as a new project")
-        self._action(f, "📥 Import Data…", self.import_data,
+        self._action(f, "Import Data…", self.import_data,
                      tip="Add another Spine JSON's bones, slots, skins and animations to this skeleton")
-        self._action(f, "🖼 Import PSD / OpenRaster…", self.import_psd_file,
+        self._action(f, "Import PSD / OpenRaster…", self.import_psd_file,
                      tip="Add a Photoshop (.psd) or Krita/GIMP OpenRaster (.ora) file's layers as slots, placed "
                          "where they sit; Anim2D follows the file and updates the images when it's saved")
-        self._action(f, "🔄 Sync layered images now", self.sync_layers,
+        self._action(f, "Sync layered images now", self.sync_layers,
                      tip="Read every imported .psd/.ora file again and update changed layers")
-        self._action(f, "📤 Export…", self.export_spine, "Ctrl+E",
+        self._action(f, "&Export…", self.export_spine, "Ctrl+E",
                      "JSON, binary, GIF, PNG, APNG, PSD, JPEG, WebP, AVI, MOV or MP4")
-        self._action(f, "🎮 Unity Bridge…", self.unity_bridge,
+        self._action(f, "Unity Bridge…", self.unity_bridge,
                      tip="Export straight into a Unity project for spine-unity, optionally on every save")
-        self._action(f, "🎮 Export to Unity", self.export_to_unity, "Ctrl+Alt+E",
+        self._action(f, "Export to Unity", self.export_to_unity, "Ctrl+Alt+E",
                      "Export into the Unity project set in Unity Bridge")
         f.addSeparator()
-        self._action(f, "📦 Texture Packer…", self.texture_packer, "Ctrl+P")
-        self._action(f, "📤 Texture Unpacker…", self.texture_unpacker)
+        self._action(f, "Texture Packer…", self.texture_packer, "Ctrl+P")
+        self._action(f, "Texture Unpacker…", self.texture_unpacker)
         f.addSeparator()
-        self._action(f, "⚙ Settings…", self.open_settings, "F12")
+        self._action(f, "Settings…", self.open_settings, "F12")
         self._action(f, "Set Images Folder…", self.set_images_folder)
         f.addSeparator()
-        self._action(f, "Quit", self.close, QKeySequence.StandardKey.Quit)
+        self._action(f, "E&xit", self.close, QKeySequence.StandardKey.Quit)
 
         e = bar.addMenu("&Edit")
         self.undo_action = self._action(e, "Undo", self.doc_undo, QKeySequence.StandardKey.Undo)
@@ -331,12 +332,13 @@ class EditorWindow(QMainWindow):
             action = dock.toggleViewAction()
             action.setText(text)
             v.addAction(action)
-        self._action(v, "Reset window layout", self.reset_layout, tip="Put every window back in its place")
+        self._action(v, "Reset window &layout", self.reset_layout, tip="Put every window back in its place")
         weights = self.weights_dock.toggleViewAction()
         weights.setText("Weights")
         v.addAction(weights)
         preview = self.preview_dock.toggleViewAction()
-        preview.setText("Preview (plays animations, crossfades)")
+        preview.setText("Preview")
+        preview.setStatusTip("A second viewport that plays animations and crossfades on its own")
         self.shortcuts.add("Preview window", preview, "Ctrl+Shift+P")
         v.addAction(preview)
 
@@ -344,7 +346,8 @@ class EditorWindow(QMainWindow):
         self._action(fx, "Insert FX into skeleton…", self.insert_fx, "Ctrl+I",
                      "Add a preset or Spine template effect to the selected bone and current animation")
         self._action(fx, "Import FX template from Spine export…", self.import_template)
-        self._action(fx, "Open FX Preset Builder", self.open_fx_builder)
+        self._action(fx, "Open FX Builder", self.open_fx_builder, tip="Generate FX packages from presets in "
+                     "the FX Builder window")
 
         h = bar.addMenu("&Help")
         self._action(h, "Search commands…", self.search_commands, "Ctrl+Space",
@@ -373,6 +376,8 @@ class EditorWindow(QMainWindow):
         fx_bar.setObjectName("FX")
         self.addToolBar(fx_bar)
         self._action(fx_bar, "✨ Insert FX", self.insert_fx)
+        for top in bar.actions():  # last, once every command is in its menu
+            add_access_keys(top.menu())
 
     def _selected_bone(self) -> str:
         sel = self.state.selection
@@ -481,9 +486,9 @@ class EditorWindow(QMainWindow):
         if len(doc.skeleton_names()) > 1:
             name += f" [{doc.skeleton_name}]"
         self.setWindowTitle(f"{APP_NAME}{title_suffix()} - {name}{' *' if doc.dirty else ''}")
-        self.undo_action.setText(f"Undo {doc.undo_label()}".strip())
+        self.undo_action.setText(f"&Undo {doc.undo_label()}".strip())
         self.undo_action.setEnabled(doc.can_undo)
-        self.redo_action.setText(f"Redo {doc.redo_label()}".strip())
+        self.redo_action.setText(f"&Redo {doc.redo_label()}".strip())
         self.redo_action.setEnabled(doc.can_redo)
         errors, warnings = doc.validate()
         if errors:
@@ -557,7 +562,16 @@ class EditorWindow(QMainWindow):
         return answer == QMessageBox.StandardButton.Discard
 
     def _start_dir(self) -> str:
-        return str(self.store.value("last_dir", str(Path.home())))
+        """The folder file dialogs open in: the last one used, at first Documents/Anim2D/Projects."""
+        saved = self.store.value("last_dir")
+        if saved and Path(str(saved)).is_dir():
+            return str(saved)
+        from .. import paths
+        try:
+            paths.projects_dir().mkdir(parents=True, exist_ok=True)
+        except OSError:
+            return str(Path.home())
+        return str(paths.projects_dir())
 
     def _remember_dir(self, path: Path) -> None:
         self.store.setValue("last_dir", str(Path(path).parent))
@@ -972,6 +986,29 @@ class EditorWindow(QMainWindow):
     def _update_available(self, release) -> None:
         self.update_button.setText(f"⬆ Update to {release.version}")
         self.update_button.show()
+
+    def _updated_note(self) -> QPushButton | None:
+        """'Updated to x.y.z · What's new' in the status bar, the first time a newer version starts."""
+        from .. import updates
+        from ..resources import HOMEPAGE, VERSION
+        last = str(self.store.value("last_version", "") or "")
+        self.store.setValue("last_version", VERSION)
+        if not last or not updates.is_newer(VERSION, last):
+            return None
+        button = QPushButton(f"✓ Updated to {VERSION} · What's new")
+        button.setFlat(True)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setToolTip(f"Anim2D was updated from {last}. Click for the release notes.")
+
+        def open_notes() -> None:
+            from PySide6.QtCore import QUrl
+            from PySide6.QtGui import QDesktopServices
+            QDesktopServices.openUrl(QUrl(f"{HOMEPAGE}/releases/tag/v{VERSION}"))
+            button.hide()
+        button.clicked.connect(open_notes)
+        self.statusBar().addPermanentWidget(button)
+        QTimer.singleShot(120_000, button, button.hide)  # a note, not a fixture
+        return button
 
     def _show_update(self) -> None:
         from .update_ui import UpdateDialog

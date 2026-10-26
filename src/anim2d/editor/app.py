@@ -73,6 +73,10 @@ def _write_failure(out_dir: Path) -> None:
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
+    from .. import logs, paths
+    logs.setup("editor")
+    logs.install_error_handler()
+    paths.migrate()
     apply_theme(app)
     apply_app_icon(app)
     window = EditorWindow()
