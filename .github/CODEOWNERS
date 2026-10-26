@@ -1,2 +1,7 @@
-# Code owners are requested for review automatically when a pull request is opened or marked ready (not while it is a draft).
-* @turtlegameworks @PawarRahul1224
+# Review requested automatically on every PR (not while draft).
+# ojaseminem: required reviewer.
+* @ojaseminem
+
+# PawarRahul1224: notified but their approval is not required.
+^[Optional]
+* @PawarRahul1224
