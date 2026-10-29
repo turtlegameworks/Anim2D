@@ -1,11 +1,15 @@
 name: Release
 
-# Push a tag like v0.18.0 (matching anim2d.__version__, with a "## 0.18.0" entry in CHANGELOG.md) to build,
-# test and publish a release: the Windows installer and portable program, and a macOS disk image each for
-# Apple silicon and Intel Macs. The release's description is the CHANGELOG.md entry and a downloads table.
+# Builds, tests and publishes a release: the Windows installer and portable program, and a macOS disk image
+# each for Apple silicon and Intel Macs. The release's description is the version's CHANGELOG.md entry and a
+# downloads table. Two ways to start it, for the version in anim2d.__version__ (with a "## 0.18.0" entry in
+# CHANGELOG.md):
+#   - push a tag like v0.18.0, or
+#   - Actions → Release → Run workflow on main: the release, and its tag, are made on the commit it built.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,10 +31,26 @@ jobs:
           python-version: "3.13"
       - name: Check the tag matches the version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(PYTHONPATH=src python -c "import anim2d; print(anim2d.__version__)")
-          if [ "v$version" != "${{ github.ref_name }}" ]; then
-            echo "::error::Tag ${{ github.ref_name }} does not match anim2d.__version__ ($version)"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            # Run workflow: release main's version, under a tag that doesn't exist yet.
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::Run the release on main (it was run on $GITHUB_REF_NAME)"
+              exit 1
+            fi
+            # Only a 404 means the tag is free; any other failure (rate limit, outage) stops here.
+            if found=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$version" 2>&1); then
+              echo "::error::v$version is already released: raise anim2d.__version__ first"
+              exit 1
+            elif ! grep -q "HTTP 404" <<< "$found"; then
+              echo "::error::Couldn't check whether v$version exists: $found"
+              exit 1
+            fi
+          elif [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match anim2d.__version__ ($version)"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -137,9 +157,17 @@ jobs:
           test "$(wc -l < SHA256SUMS.txt)" -eq 4  # installer, portable, two disk images
       - name: Release notes
         run: python tools/release_notes.py "$VERSION" > notes.md
+      # Run workflow: create v<version> on the commit every job built. Creating the ref fails if the tag
+      # exists, so a tag pushed meanwhile can't end up with these files. (A tag made with this token
+      # doesn't start another release run.) A pushed tag is used as it is.
+      - name: Create the tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/v$VERSION" -f "sha=$GITHUB_SHA"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" dist/Anim2D-* dist/SHA256SUMS.txt \
+          gh release create "v$VERSION" dist/Anim2D-* dist/SHA256SUMS.txt \
             --title "Anim2D $VERSION" --notes-file notes.md --verify-tag

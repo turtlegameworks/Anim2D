@@ -178,6 +178,7 @@ CI tests on Windows and on Apple silicon and Intel Macs, and builds all three on
 `v<version>` tag that matches `anim2d.__version__` publishes a release: the Windows installer and portable
 program, both disk images and `SHA256SUMS.txt`, with the version's `CHANGELOG.md` entry and a downloads table
 as its description (`tools/release_notes.py`). A version without a changelog entry is not released.
+Without a clone, **Actions → Release → Run workflow** on `main` does the same and creates the tag itself.
 
 ## Project layout
 
