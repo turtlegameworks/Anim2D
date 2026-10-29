@@ -16,7 +16,7 @@ from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon
 from PySide6.QtWidgets import (QCheckBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
                                QMessageBox, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget)
 
-from ..resources import APP_NAME, HOMEPAGE, VERSION, icon_path, system_description
+from ..resources import APP_NAME, DOCS_URL, HOMEPAGE, VERSION, WEBSITE, icon_path, system_description
 from . import document
 from .form_widgets import SliderField, section
 
@@ -313,7 +313,7 @@ class SettingsDialog(QDialog):
         return _page(head,
                      QLabel("A free, open-source 2D skeletal animation editor and FX builder that reads and "
                             "writes Spine data."),
-                     _buttons_row(_link_button("Website", HOMEPAGE),
+                     _buttons_row(_link_button("Website", WEBSITE), _link_button("Documentation", DOCS_URL),
                                   _link_button("Report a bug", f"{HOMEPAGE}/issues/new/choose"),
                                   _link_button("Release notes", f"{HOMEPAGE}/releases")),
                      _buttons_row(copy, log_folder),

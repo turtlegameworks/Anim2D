@@ -1,0 +1,52 @@
+name: Website
+
+# Builds the product site (site/ and the docs in docs/, tools/build_site.py) and publishes it to GitHub Pages:
+# https://turtlegameworks.github.io/Anim2D/. Repository settings → Pages → Source must be "GitHub Actions".
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "docs/**", "README.md", "tools/build_site.py", "tools/make_icon.py", ".github/workflows/pages.yml"]
+  pull_request:
+    paths: ["site/**", "docs/**", "README.md", "tools/build_site.py", "tools/make_icon.py", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: python -m pip install -e ".[site]"
+      # Fails on a link or image that points at a file that doesn't exist.
+      - name: Build
+        run: python tools/build_site.py --out _site
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+
+  deploy:
+    name: Publish
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

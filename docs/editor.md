@@ -4,7 +4,7 @@ A 2D skeletal animation editor that reads Spine 3.8 and 4.0 JSON and exports **S
 binary (.skel)**, or Spine 3.8 JSON, with a texture packer and the FX library built in. Exports
 play in Spine 4.0 runtimes such as spine-unity 4.0 (or 3.8 runtimes when exported as 3.8).
 
-![Setup mode](screenshots/anim2d_setup_mode.png)
+![Setup mode](screenshots/editor_setup_mode.png)
 
 ```bash
 .venv\Scripts\anim2d

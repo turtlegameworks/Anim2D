@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platform: Windows | macOS](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-0078d4)
 
-[Download](#install) · [Editor guide](docs/editor.md) · [FX presets](docs/fx_presets.md) · [Contributing](CONTRIBUTING.md)
+[Website](https://turtlegameworks.github.io/Anim2D/) · [Download](#install) · [Editor guide](docs/editor.md) · [FX presets](docs/fx_presets.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -171,6 +171,20 @@ On a Mac (it builds for that Mac's processor: Apple silicon or Intel):
 
 This writes `dist/Anim2D.app` and its disk image, `dist/Anim2D-<version>-macOS-AppleSilicon.dmg` (or `-Intel`).
 `tools/self_test.py` mounts the disk image and runs the app's own checks from inside it.
+
+### Website
+
+The product site, [turtlegameworks.github.io/Anim2D](https://turtlegameworks.github.io/Anim2D/), is the landing
+page in `site/` plus every guide in `docs/` as a web page (and the Install section above as its install guide).
+`.github/workflows/pages.yml` publishes it to GitHub Pages on every push to `main` that changes them. To build it
+locally:
+
+```bash
+.venv\Scripts\python -m pip install -e ".[site]"
+.venv\Scripts\python tools\build_site.py
+```
+
+It writes `build\site\` and fails if a page links to a file or image that doesn't exist.
 
 ### Releases
 
