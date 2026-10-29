@@ -50,3 +50,23 @@ def test_links_between_docs_become_pages_and_others_go_to_github():
 def test_the_install_page_links_from_readme_paths():
     out = build_site.rewrite_links('<a href="docs/editor.md">g</a> <a href="LICENSE">l</a>', {"editor"}, "README.md")
     assert 'href="editor.html"' in out and f'href="{build_site.BLOB}/LICENSE"' in out
+
+
+@pytest.mark.parametrize("folder", [ROOT, ROOT.parent, ROOT / "site", ROOT / "docs", ROOT / "docs" / "out",
+                                    ROOT / "src", ROOT / "tools" / "x"])
+def test_never_builds_over_the_sources(folder):
+    with pytest.raises(SystemExit, match="Refusing"):
+        build_site.check_output(folder)
+
+
+def test_replaces_only_a_previous_build(tmp_path):
+    other = tmp_path / "photos"
+    other.mkdir()
+    (other / "holiday.jpg").write_bytes(b"x")
+    with pytest.raises(SystemExit, match="isn't a previous site build"):
+        build_site.check_output(other)
+    assert (other / "holiday.jpg").is_file()
+    (tmp_path / "empty").mkdir()
+    build_site.check_output(tmp_path / "empty")  # an empty folder is fine
+    built = build_site.build(tmp_path / "site")
+    build_site.check_output(built)  # and so is the last build, which it then replaces

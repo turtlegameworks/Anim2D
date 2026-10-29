@@ -144,10 +144,27 @@ def broken_links(out: Path) -> list[str]:
     return problems
 
 
+MARKER = ".anim2d-site"  # in every build, so only a previous build is ever replaced
+
+
+def check_output(out: Path) -> None:
+    """Refuse a folder that would delete sources or something that isn't a previous build."""
+    out = out.resolve()
+    if out == ROOT or out in ROOT.parents:
+        raise SystemExit(f"Refusing to build into {out}: it contains the repository.")
+    for source in (SITE, DOCS, ROOT / "src", ROOT / "tools", ROOT / "tests", ROOT / ".github"):
+        if out == source or source in out.parents:
+            raise SystemExit(f"Refusing to build into {out}: it is part of the sources ({source.name}/).")
+    if out.exists() and (not out.is_dir() or (any(out.iterdir()) and not (out / MARKER).is_file())):
+        raise SystemExit(f"Refusing to replace {out}: it exists and isn't a previous site build.")
+
+
 def build(out: Path) -> Path:
+    check_output(out)
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(SITE, out)
+    (out / MARKER).write_text("built by tools/build_site.py\n", encoding="utf-8")
     from make_icon import draw
     icon = draw()
     for size in (64, 256):

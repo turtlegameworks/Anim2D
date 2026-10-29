@@ -5,9 +5,11 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ["site/**", "docs/**", "README.md", "tools/build_site.py", "tools/make_icon.py", ".github/workflows/pages.yml"]
+    paths: ["site/**", "docs/**", "README.md", "tools/build_site.py", "tools/make_icon.py", "pyproject.toml",
+            ".github/workflows/pages.yml"]
   pull_request:
-    paths: ["site/**", "docs/**", "README.md", "tools/build_site.py", "tools/make_icon.py", ".github/workflows/pages.yml"]
+    paths: ["site/**", "docs/**", "README.md", "tools/build_site.py", "tools/make_icon.py", "pyproject.toml",
+            ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -23,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false  # the build runs repository code; it needs no token
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"

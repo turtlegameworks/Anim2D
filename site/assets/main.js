@@ -9,15 +9,16 @@
     var uaPlatform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
     if (/Win/i.test(uaPlatform) || /Windows/i.test(ua)) return "windows";
     if (/Mac/i.test(uaPlatform) || /Macintosh/i.test(ua)) {
-      // Browsers on Apple silicon report "Intel" in the user agent; WebGL's renderer names the real GPU.
+      // Every Mac browser says "Intel" in its user agent. WebGL's renderer names the GPU in Chrome and
+      // Firefox, but Safari says just "Apple GPU" on Intel Macs too, so only a named chip counts.
       try {
         var gl = document.createElement("canvas").getContext("webgl");
         var info = gl && gl.getExtension("WEBGL_debug_renderer_info");
-        var renderer = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : "";
-        if (/Apple (M\d|GPU)/i.test(renderer)) return "mac-arm";
+        var renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+        if (/Apple M\d/i.test(renderer)) return "mac-arm";
         if (/Intel|AMD|Radeon|NVIDIA/i.test(renderer)) return "mac-intel";
-      } catch (e) { /* fall through */ }
-      return "mac-arm"; // most Macs sold since 2020
+      } catch (e) { /* unknown */ }
+      return "mac"; // a Mac, but which processor isn't known: offer both
     }
     return null;
   }
@@ -29,6 +30,9 @@
   if (mine) {
     mine.classList.add("recommended");
     primary.textContent = "Download for " + mine.querySelector("strong").textContent;
+  } else if (here === "mac") {
+    primary.textContent = "Download for macOS";
+    primary.href = "#download";
   }
 
   fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
