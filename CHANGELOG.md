@@ -13,7 +13,7 @@ Fixes for the Mac app. 0.18.0 can't update itself on a Mac: download this versio
 * Check for Updates failed on macOS with `CERTIFICATE_VERIFY_FAILED`: the app had no certificates to check
   GitHub's against. Update checks now use the certificates the system trusts (the Keychain on macOS).
 
-## 0.18.0 (2026-10-30)
+## 0.18.0 (2026-10-29)
 
 Anim2D runs on Macs.
 
