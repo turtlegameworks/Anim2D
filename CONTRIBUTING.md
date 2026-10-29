@@ -21,7 +21,7 @@ for Windows; on a Mac use `.venv/bin/` in place of `.venv\Scripts\`.
 git clone https://github.com/turtlegameworks/Anim2D.git
 cd Anim2D
 python -m venv .venv
-.venv\Scripts\python -m pip install -e .[dev]
+.venv\Scripts\python -m pip install -e ".[dev]"
 .venv\Scripts\python tools\fetch_spine_runtime.py
 ```
 

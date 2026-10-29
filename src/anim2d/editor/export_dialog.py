@@ -626,7 +626,7 @@ class ExportDialog(QDialog):
             QMessageBox.information(self, "Export", "Exported with notes:\n\n" + "\n".join(self.warnings[:15]))
         if self.open_after.isChecked() and self.written:
             target = self.written[0] if len(self.written) == 1 else self.written[0].parent
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))  # Explorer / Finder / the file's app
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(target.resolve())))  # Explorer, Finder or its app
         self.accept()
 
 

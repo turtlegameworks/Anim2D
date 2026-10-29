@@ -56,6 +56,7 @@ def test_a_project_opened_from_finder_opens_in_the_window(window, tmp_path):
     path = _project(tmp_path)
     handled = editor_app.FileOpenFilter(window).eventFilter(None, QFileOpenEvent(str(path)))
     assert handled and "from_finder" in _bones(window)
+    assert window.recent_projects()[0] == str(path.resolve()), "like File > Open, it's a recent project"
 
 
 def test_opening_from_finder_asks_to_save_changes_first(window, tmp_path, monkeypatch):

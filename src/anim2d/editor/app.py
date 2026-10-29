@@ -80,8 +80,12 @@ def open_path(window: EditorWindow, path: Path) -> None:
     except EditorError as exc:
         QMessageBox.warning(window, APP_NAME, str(exc))
         return
-    if window._confirm_discard():
-        window.set_document(doc)
+    if not window._confirm_discard():
+        return
+    window.set_document(doc)
+    if path.suffix.lower() in PROJECT_SUFFIXES:  # like File > Open; imports stay out of Recent Projects
+        window._remember_dir(path)
+        window.add_recent(path)
 
 
 class FileOpenFilter(QObject):

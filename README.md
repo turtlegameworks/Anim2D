@@ -115,7 +115,7 @@ on a Mac use `.venv/bin/` in place of `.venv\Scripts\` and `/` in paths.
 git clone https://github.com/turtlegameworks/Anim2D.git
 cd Anim2D
 python -m venv .venv
-.venv\Scripts\python -m pip install -e .[dev]
+.venv\Scripts\python -m pip install -e ".[dev]"
 ```
 
 | Command | What it opens |
@@ -152,7 +152,7 @@ skip if they are not available (see `ANIM2D_SPINE_EXAMPLES` and `ANIM2D_SPINE_PR
 ### Build the Windows program
 
 ```bash
-.venv\Scripts\python -m pip install -e .[build]
+.venv\Scripts\python -m pip install -e ".[build]"
 .venv\Scripts\python tools\build_exe.py
 ```
 
