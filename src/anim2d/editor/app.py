@@ -56,6 +56,11 @@ def _self_test(window: EditorWindow, out_dir: Path) -> dict:
     unpacked = atlas.unpack(packed[0], out_dir / "export" / "unpacked")
     from ..formats import spine_project  # .spine import is bundled
     videos["spine_project"] = len(spine_project.schema42.SCHEMA)
+    from .. import updates  # HTTPS through the system's certificates is bundled (update checks)
+    tls = type(updates.tls_context()).__module__
+    if not tls.startswith("truststore"):
+        raise RuntimeError(f"update checks would use {tls}, not the system's certificates")
+    report["tls"] = tls
     report.update(inserted=result.prefix, bones=len(doc.bones), valid=doc.validate()[0] == [], videos=videos,
                   packed=[p.name for p in packed], unpacked=len(unpacked), ok=True)
     (out_dir / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

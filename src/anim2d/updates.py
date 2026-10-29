@@ -23,12 +23,14 @@ import os
 import re
 import shutil
 import socket
+import ssl
 import subprocess
 import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Iterator
 
@@ -94,6 +96,18 @@ def is_newer(candidate: str, current: str = VERSION) -> bool:
 
 # --- talking to GitHub ---------------------------------------------------------------------------
 
+@lru_cache(maxsize=1)
+def tls_context() -> ssl.SSLContext:
+    """HTTPS that trusts what the system trusts: the Keychain on macOS, the certificate store on Windows
+    (including certificates an organisation adds). The built macOS app needs this: its bundled Python has
+    no certificate file of its own, so plain urllib can't verify any site."""
+    try:
+        import truststore
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except Exception:  # never let this stop a check; Python's own defaults still work on Windows and Linux
+        return ssl.create_default_context()
+
+
 def _request(url: str, accept: str) -> urllib.request.Request:
     return urllib.request.Request(url, headers={"Accept": accept, "User-Agent": f"Anim2D/{VERSION} (update check)"})
 
@@ -101,7 +115,7 @@ def _request(url: str, accept: str) -> urllib.request.Request:
 def _open(url: str, accept: str, timeout: float):
     """urlopen, with every network failure turned into an UpdateError that says what happened."""
     try:
-        return urllib.request.urlopen(_request(url, accept), timeout=timeout)
+        return urllib.request.urlopen(_request(url, accept), timeout=timeout, context=tls_context())
     except urllib.error.HTTPError as exc:
         if exc.code in (403, 429) and (exc.headers.get("X-RateLimit-Remaining") == "0" or exc.code == 429):
             raise UpdateError("GitHub is limiting update checks from this network right now. "

@@ -25,6 +25,7 @@ dependencies = [
     "pillow==12.3.0",
     "PySide6-Essentials==6.12.0",
     "PySide6-Addons==6.12.0",  # QtMultimedia: MP4 export, reference video, event audio
+    "truststore==0.10.5",  # update checks trust the system's certificates (the macOS app has none bundled)
 ]
 
 [project.optional-dependencies]

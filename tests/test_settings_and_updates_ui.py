@@ -91,6 +91,16 @@ def test_view_appearance_and_help_about_open_their_pages(window, monkeypatch):
     assert {"Check for Updates…", "Report a Bug…", "About Anim2D"} <= set(names)
 
 
+@pytest.mark.parametrize("kind", ["installed", "portable", "mac", "source", "dev"])
+def test_updates_page_opens_for_every_kind_of_copy(window, monkeypatch, kind):
+    # Preferences and About crashed on the Mac app: the Updates page had no text for "mac".
+    monkeypatch.setattr(updates, "install_kind", lambda: kind)
+    for page in ("General", "Updates", "About"):
+        dialog = SettingsDialog(window.settings, window, window=window, page=page)
+        assert dialog.update_kind == kind
+        dialog.reject()
+
+
 def test_auto_check_setting_is_saved_on_ok(window):
     dialog = SettingsDialog(window.settings, window, window=window, page="Updates")
     assert dialog.auto_check.isChecked()
