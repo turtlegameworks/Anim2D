@@ -1,7 +1,4 @@
-# Review requested automatically on every PR (not while draft).
-# ojaseminem: required reviewer.
+# Review requested automatically on every PR (not while draft); with "Require review from Code Owners",
+# this approval is the one that counts. Others, such as @PawarRahul1224, can be added to a PR by hand.
+# (GitHub has no optional sections: when several lines match a file, the last one wins.)
 * @ojaseminem
-
-# PawarRahul1224: notified but their approval is not required.
-^[Optional]
-* @PawarRahul1224
