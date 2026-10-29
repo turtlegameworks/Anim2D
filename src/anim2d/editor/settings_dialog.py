@@ -16,7 +16,7 @@ from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon
 from PySide6.QtWidgets import (QCheckBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
                                QMessageBox, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget)
 
-from ..resources import APP_NAME, HOMEPAGE, VERSION, icon_path
+from ..resources import APP_NAME, HOMEPAGE, VERSION, icon_path, system_description
 from . import document
 from .form_widgets import SliderField, section
 
@@ -299,7 +299,7 @@ class SettingsDialog(QDialog):
         row.addWidget(icon)
         row.addWidget(title, 1)
         from .. import logs
-        self.system_info = (f"{APP_NAME} {VERSION}\nWindows {platform.version()} ({platform.machine()})\n"
+        self.system_info = (f"{APP_NAME} {VERSION}\n{system_description()}\n"
                             f"Python {platform.python_version()} · Qt {qVersion()} · PySide6 {pyside_version}\n"
                             f"{'Built program' if getattr(sys, 'frozen', False) else 'From source'}\n"
                             f"Log: {logs.log_file()}")

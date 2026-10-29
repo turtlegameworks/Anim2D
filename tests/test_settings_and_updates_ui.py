@@ -39,6 +39,10 @@ def _release(version="99.0.0") -> Release:
                                                                "https://example.test/s.exe", 10),
                            f"Anim2D-Portable-{version}.exe": Asset(f"Anim2D-Portable-{version}.exe",
                                                                   "https://example.test/p.exe", 10),
+                           f"Anim2D-{version}-macOS-AppleSilicon.dmg": Asset(
+                               f"Anim2D-{version}-macOS-AppleSilicon.dmg", "https://example.test/a.dmg", 10),
+                           f"Anim2D-{version}-macOS-Intel.dmg": Asset(f"Anim2D-{version}-macOS-Intel.dmg",
+                                                                      "https://example.test/i.dmg", 10),
                            "SHA256SUMS.txt": Asset("SHA256SUMS.txt", "https://example.test/sums", 10)})
 
 
@@ -162,7 +166,7 @@ def test_a_bug_in_the_check_does_not_escape(window, dialogs, monkeypatch):
 # --- the dialog's buttons and installing
 
 @pytest.mark.parametrize("kind, main", [("installed", "Install update"), ("portable", "Download"),
-                                         ("source", "Open release page")])
+                                         ("mac", "Download"), ("source", "Open release page")])
 def test_update_dialog_fits_this_copy(window, monkeypatch, kind, main):
     monkeypatch.setattr(updates, "install_kind", lambda: kind)
     dialog = update_ui.UpdateDialog(window.updates, _release(), window)
@@ -224,6 +228,39 @@ def test_portable_copy_downloads_next_to_itself(window, monkeypatch, tmp_path):
     window.updates.install(_release())
     _wait(lambda: shown)
     assert folders == [("Anim2D-Portable-99.0.0.exe", tmp_path)] and "Anim2D-Portable-99.0.0.exe" in shown[0]
+
+
+@pytest.mark.parametrize("arch", ["AppleSilicon", "Intel"])
+def test_mac_app_downloads_the_disk_image_for_this_mac(window, monkeypatch, tmp_path, arch):
+    monkeypatch.setattr(updates, "install_kind", lambda: "mac")
+    monkeypatch.setattr(updates, "mac_arch", lambda: arch)
+    name = f"Anim2D-99.0.0-macOS-{arch}.dmg"
+    monkeypatch.setattr(updates, "fetch_checksums", lambda r: {name: "ab" * 32})
+    folders = []
+    monkeypatch.setattr(updates, "download", lambda asset, sha, folder, report: folders.append((asset.name, folder))
+                        or Path(folder) / asset.name)
+    monkeypatch.setattr(updates, "start_installer", lambda *a: pytest.fail("the Mac app is never run as an installer"))
+    asked, shown, opened = [], [], []
+    monkeypatch.setattr(window, "_confirm_discard", lambda: asked.append(True) or True)
+    monkeypatch.setattr(update_ui.QMessageBox, "exec", lambda self: shown.append(self.text()))
+    monkeypatch.setattr(update_ui.QDesktopServices, "openUrl", lambda url: opened.append(url))
+    window.updates.install(_release())
+    _wait(lambda: shown)
+    assert folders == [(name, Path.home() / "Downloads")]  # conftest's home folder
+    assert name in shown[0] and "Applications" in shown[0] and not opened  # opened only if asked
+    assert not asked, "downloading doesn't close anything, so it doesn't ask to save"
+
+
+def test_mac_app_without_a_disk_image_opens_the_release_page(window, monkeypatch):
+    monkeypatch.setattr(updates, "install_kind", lambda: "mac")
+    release = _release()
+    release.assets.pop("Anim2D-99.0.0-macOS-Intel.dmg")
+    monkeypatch.setattr(updates, "mac_arch", lambda: "Intel")
+    monkeypatch.setattr(updates, "fetch_checksums", lambda r: pytest.fail("nothing to download"))
+    opened = []
+    monkeypatch.setattr(update_ui.QDesktopServices, "openUrl", lambda url: opened.append(url.toString()))
+    window.updates.install(release)
+    assert opened == ["https://example.test/release"]
 
 
 # --- menus follow the Windows conventions

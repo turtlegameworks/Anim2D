@@ -35,10 +35,11 @@ body:
     validations:
       required: true
   - type: input
-    id: windows
+    id: system
     attributes:
-      label: Windows version
-      placeholder: Windows 11 24H2
+      label: Windows or macOS version
+      description: Settings → About → Copy system info has it, and the Anim2D version.
+      placeholder: Windows 11 24H2 / macOS 15.1 on Apple silicon
   - type: textarea
     id: files
     attributes:

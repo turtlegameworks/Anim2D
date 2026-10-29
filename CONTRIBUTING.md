@@ -14,7 +14,8 @@ of any size are welcome: bug reports, docs fixes, new FX presets, features.
 
 ## Set up
 
-Windows, Python 3.11+ and Git; Node.js 22 for the runtime-parity tests.
+Windows or macOS 14+, Python 3.11+ and Git; Node.js 22 for the runtime-parity tests. The commands are
+for Windows; on a Mac use `.venv/bin/` in place of `.venv\Scripts\`.
 
 ```bash
 git clone https://github.com/turtlegameworks/Anim2D.git
@@ -31,8 +32,8 @@ python -m venv .venv
 .venv\Scripts\python -m pytest
 ```
 
-Both must pass. CI runs the same commands on Windows with Python 3.11 and 3.13, then builds and
-self-tests the program. Add a test for every bug you fix: it should fail before your change and pass
+Both must pass. CI runs the same commands on Windows with Python 3.11 and 3.13 and on Apple silicon and
+Intel Macs, then builds and self-tests the Windows program and both macOS disk images. Add a test for every bug you fix: it should fail before your change and pass
 after.
 
 What reviewers look for:

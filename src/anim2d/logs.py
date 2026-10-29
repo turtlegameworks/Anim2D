@@ -1,7 +1,7 @@
 """The log file and what happens on an unexpected error.
 
-The built program has no console, so anything printed is lost. Instead, setup() writes to
-%LOCALAPPDATA%\\Anim2D\\logs\\anim2d.log (rotated at 1 MB, three old copies kept), and an error that
+The built program has no console, so anything printed is lost. Instead, setup() writes to anim2d.log in
+paths.logs_dir() (rotated at 1 MB, three old copies kept), and an error that
 nothing caught is written there and shown in a message box that says what to do next, rather than the
 program disappearing or doing nothing.
 """
@@ -17,7 +17,7 @@ import traceback
 from pathlib import Path
 
 from . import paths
-from .resources import APP_NAME, VERSION, build_info
+from .resources import APP_NAME, VERSION, build_info, system_description
 
 LOG_NAME = "anim2d.log"
 log = logging.getLogger("anim2d")
@@ -46,8 +46,8 @@ def setup(mode: str) -> Path | None:
     _installed = True
     from PySide6.QtCore import qVersion
     info = build_info()
-    log.info("%s %s (%s, %s%s) on Windows %s, Python %s, Qt %s", APP_NAME, VERSION, mode, info.get("channel"),
-             f" {str(info.get('commit', ''))[:7]}" if info.get("commit") else "", platform.version(),
+    log.info("%s %s (%s, %s%s) on %s, Python %s, Qt %s", APP_NAME, VERSION, mode, info.get("channel"),
+             f" {str(info.get('commit', ''))[:7]}" if info.get("commit") else "", system_description(),
              platform.python_version(), qVersion())
     return log_file()
 

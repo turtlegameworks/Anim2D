@@ -54,6 +54,16 @@ def build_info() -> dict:
     return info
 
 
+def system_description() -> str:
+    """'Windows 10.0.26100 (AMD64)', 'macOS 15.1 (arm64)': for the log and bug reports."""
+    import platform
+    if sys.platform == "darwin":
+        return f"macOS {platform.mac_ver()[0]} ({platform.machine()})"
+    if sys.platform == "win32":
+        return f"Windows {platform.version()} ({platform.machine()})"
+    return f"{platform.system()} {platform.release()} ({platform.machine()})"
+
+
 def is_dev_build() -> bool:
     return build_info().get("channel") == "dev"
 

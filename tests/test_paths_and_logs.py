@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 
 import pytest
@@ -28,13 +29,37 @@ def test_layout(docs, tmp_path):
     assert paths.projects_dir() == docs / "Anim2D" / "Projects"
     assert paths.templates_dir() == docs / "Anim2D" / "FX Templates"
     assert paths.fx_output_dir() == docs / "Anim2D" / "FX Output"
-    assert paths.updates_dir() == tmp_path / "LocalAppData" / "Anim2D" / "updates"
-    assert paths.logs_dir() == tmp_path / "LocalAppData" / "Anim2D" / "logs"
+    if sys.platform == "darwin":
+        library = tmp_path / "home" / "Library"
+        assert paths.updates_dir() == library / "Application Support" / "Anim2D" / "updates"
+        assert paths.logs_dir() == library / "Logs" / "Anim2D"
+    elif sys.platform == "win32":
+        assert paths.updates_dir() == tmp_path / "LocalAppData" / "Anim2D" / "updates"
+        assert paths.logs_dir() == tmp_path / "LocalAppData" / "Anim2D" / "logs"
+    else:
+        assert paths.updates_dir() == tmp_path / "home" / ".local" / "share" / "Anim2D" / "updates"
 
 
+@pytest.mark.parametrize("platform, data, logs_folder", [
+    ("win32", ("LocalAppData", "Anim2D"), ("LocalAppData", "Anim2D", "logs")),
+    ("darwin", ("home", "Library", "Application Support", "Anim2D"), ("home", "Library", "Logs", "Anim2D")),
+])
+def test_app_files_follow_the_system(tmp_path, monkeypatch, platform, data, logs_folder):
+    monkeypatch.setattr(paths.sys, "platform", platform)
+    assert paths.app_data() == tmp_path.joinpath(*data)
+    assert paths.logs_dir() == tmp_path.joinpath(*logs_folder)
+    assert paths.updates_dir() == tmp_path.joinpath(*data, "updates")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows' own Documents lookup")
 def test_documents_comes_from_windows():
     found = paths.known_documents()  # the real lookup: conftest only replaces documents()
     assert found is not None and found.is_dir()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="macOS and others: Documents in the home folder")
+def test_documents_elsewhere_is_in_the_home_folder():
+    assert paths.known_documents() is None  # so documents() is ~/Documents
 
 
 def test_old_folders_move_once_without_overwriting(docs):

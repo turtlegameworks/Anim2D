@@ -4,13 +4,12 @@ and Video (AVI, MOV, MP4) on the left, that format's options on the right."""
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from PySide6.QtCore import QRectF, QSettings, Qt, QTimer
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtCore import QRectF, QSettings, Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QDesktopServices, QPixmap
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog, QFileDialog, QFormLayout,
                                QFrame, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QRadioButton,
                                QSpinBox, QStackedWidget, QVBoxLayout, QWidget)
@@ -627,10 +626,7 @@ class ExportDialog(QDialog):
             QMessageBox.information(self, "Export", "Exported with notes:\n\n" + "\n".join(self.warnings[:15]))
         if self.open_after.isChecked() and self.written:
             target = self.written[0] if len(self.written) == 1 else self.written[0].parent
-            try:
-                os.startfile(str(target))  # type: ignore[attr-defined]
-            except (OSError, AttributeError):
-                pass
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))  # Explorer / Finder / the file's app
         self.accept()
 
 

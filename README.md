@@ -4,12 +4,12 @@
 
 # Anim2D
 
-**A free, open-source 2D skeletal animation editor and FX builder for Windows.**
+**A free, open-source 2D skeletal animation editor and FX builder for Windows and macOS.**
 
 [![CI](https://github.com/turtlegameworks/Anim2D/actions/workflows/ci.yml/badge.svg)](https://github.com/turtlegameworks/Anim2D/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/turtlegameworks/Anim2D?include_prereleases)](https://github.com/turtlegameworks/Anim2D/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078d4)
+![Platform: Windows | macOS](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-0078d4)
 
 [Download](#install) · [Editor guide](docs/editor.md) · [FX presets](docs/fx_presets.md) · [Contributing](CONTRIBUTING.md)
 
@@ -22,7 +22,7 @@ major game engines and runtimes (Unity, Godot, Cocos, Phaser, Pixi, libGDX and m
 with an FX builder that turns 37 ready-made effects into editable skeletons you can tweak, insert into
 a character, or export straight into your project.
 
-It is a single Windows program with two modes:
+It is a single program, for Windows and macOS, with two modes:
 
 * **Anim2D**, the editor. Bones, slots, region and mesh attachments, IK / transform / path constraints,
   skins, weight painting, mesh tracing, a dopesheet and graph editor, crossfade preview, texture packing
@@ -44,6 +44,8 @@ It is a single Windows program with two modes:
 | **FX** | 37 parametric presets ([catalogue](docs/fx_presets.md)), your own templates registered from Spine exports ([round trip](docs/template_round_trip.md)), deterministic seeded generation |
 
 ## Install
+
+### Windows
 
 1. Download `Anim2D-Setup-<version>.exe` from the [latest release](https://github.com/turtlegameworks/Anim2D/releases/latest).
 2. Run it and pick what you want: **Anim2D** (the editor), **Anim2D FX Builder**, or both (the default).
@@ -72,8 +74,25 @@ settings, downloaded updates and logs, and your FX templates.
 Prefer not to install? Each release also has `Anim2D-Portable-<version>.exe`: one file that runs as is,
 with no shortcuts or uninstall entry. Run it with `--fx-builder` to open the FX builder.
 
-macOS and Linux builds aren't available yet. Running from source (below) may work there, but only
-Windows is tested.
+### macOS
+
+Anim2D needs macOS 14 (Sonoma) or later, on an Apple silicon (M1 and later) or Intel Mac.
+
+1. From the [latest release](https://github.com/turtlegameworks/Anim2D/releases/latest), download the disk
+   image for your Mac: `Anim2D-<version>-macOS-AppleSilicon.dmg`, or `Anim2D-<version>-macOS-Intel.dmg` for an
+   Intel Mac (Apple menu → About This Mac says which).
+2. Open it and drag **Anim2D** into **Applications**.
+3. The builds are not signed with an Apple Developer ID yet, so the first time you open Anim2D macOS says it
+   can't check it. Choose **Done**, then **System Settings → Privacy & Security**, and **Open Anyway** next to
+   Anim2D. After that it opens normally.
+
+The FX builder is **FX → Open FX Builder**. `.anim2d` projects open from Finder. **Help → Check for Updates…**
+downloads the new disk image for your Mac to Downloads and checks it against the release's checksums; open it
+and drag Anim2D into Applications again. Your work is in `~/Documents/Anim2D`; Anim2D's own files are in
+`~/Library/Application Support/Anim2D`, its log in `~/Library/Logs/Anim2D`, and its settings in
+`~/Library/Preferences`. To uninstall, drag Anim2D from Applications to the Bin.
+
+Linux builds aren't available. Running from source (below) may work there, but isn't tested.
 
 ## Quick start
 
@@ -88,8 +107,9 @@ The [editor guide](docs/editor.md) covers every panel, tool and shortcut.
 
 ## Run from source
 
-You need Windows, [Python 3.11+](https://www.python.org/downloads/) (CI uses 3.11 and 3.13) and Git.
-Node.js 22 is optional: it's only used by the runtime-parity tests.
+You need Windows or macOS 14+, [Python 3.11+](https://www.python.org/downloads/) (CI uses 3.11 and 3.13) and
+Git. Node.js 22 is optional: it's only used by the runtime-parity tests. The commands below are for Windows;
+on a Mac use `.venv/bin/` in place of `.venv\Scripts\` and `/` in paths.
 
 ```bash
 git clone https://github.com/turtlegameworks/Anim2D.git
@@ -137,8 +157,27 @@ skip if they are not available (see `ANIM2D_SPINE_EXAMPLES` and `ANIM2D_SPINE_PR
 ```
 
 This writes `dist\Anim2D.exe` and `dist\Anim2D-Setup-<version>.exe`. `tools\self_test.ps1` runs the
-built program's own checks. CI does all of this on every push, and pushing a `v<version>` tag
-publishes a release.
+built program's own checks.
+
+### Build the macOS app
+
+On a Mac (it builds for that Mac's processor: Apple silicon or Intel):
+
+```bash
+.venv/bin/python -m pip install -e ".[build]"
+.venv/bin/python tools/build_mac.py
+.venv/bin/python tools/self_test.py dist/Anim2D-*-macOS-*.dmg
+```
+
+This writes `dist/Anim2D.app` and its disk image, `dist/Anim2D-<version>-macOS-AppleSilicon.dmg` (or `-Intel`).
+`tools/self_test.py` mounts the disk image and runs the app's own checks from inside it.
+
+### Releases
+
+CI tests on Windows and on Apple silicon and Intel Macs, and builds all three on every push. Pushing a
+`v<version>` tag that matches `anim2d.__version__` publishes a release: the Windows installer and portable
+program, both disk images and `SHA256SUMS.txt`, with the version's `CHANGELOG.md` entry and a downloads table
+as its description (`tools/release_notes.py`). A version without a changelog entry is not released.
 
 ## Project layout
 

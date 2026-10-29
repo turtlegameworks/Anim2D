@@ -3,6 +3,26 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
+## 0.18.0 (unreleased)
+
+Anim2D runs on Macs.
+
+### Added
+
+* **macOS app**, for Apple silicon and Intel Macs (macOS 14 or later): a disk image per processor, to drag
+  Anim2D into Applications. `.anim2d` projects open from Finder. The FX Builder is FX → Open FX Builder.
+* On a Mac, **Check for Updates** downloads the right disk image for that Mac to Downloads and checks it.
+* Releases have this changelog and a table of downloads in their description.
+
+### Changed
+
+* On macOS, Anim2D's own files are in `~/Library/Application Support/Anim2D`, its log in
+  `~/Library/Logs/Anim2D`; your work is in `~/Documents/Anim2D` as on Windows.
+
+### Fixed
+
+* Export → Open after export only worked on Windows.
+
 ## 0.17.1 (2026-10-24)
 
 ### Changed

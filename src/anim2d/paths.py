@@ -1,13 +1,16 @@
-"""Where Anim2D keeps things, following Windows' rule: your work in Documents, the app's own files in
-AppData.
+"""Where Anim2D keeps things, following each system's rule: your work in Documents, the app's own files
+where the system keeps them.
 
     Documents\\Anim2D\\Projects       default place to save projects
     Documents\\Anim2D\\FX Templates   templates registered from Spine exports
     Documents\\Anim2D\\FX Output      packages the FX Builder generates
-    %LOCALAPPDATA%\\Anim2D\\updates   downloaded updates (anim2d.updates)
-    %LOCALAPPDATA%\\Anim2D\\logs      anim2d.log, for bug reports (anim2d.logs)
+    <app data>\\updates              downloaded updates (anim2d.updates)
+    <logs>                           anim2d.log, for bug reports (anim2d.logs)
 
-Settings stay in the registry (HKCU\\Software\\Anim2D), where Qt keeps them on Windows. Local test builds
+App data is %LOCALAPPDATA%\\Anim2D on Windows and ~/Library/Application Support/Anim2D on macOS, with
+the logs in its logs folder on Windows and in ~/Library/Logs/Anim2D on macOS (where Console finds them).
+Settings stay where Qt keeps them: the registry (HKCU\\Software\\Anim2D) on Windows, a .plist in
+~/Library/Preferences on macOS. Local test builds
 (tools/dev_build.py) use "Anim2D Dev" / "Anim2D-Dev" in place of "Anim2D", so they never share files
 with an installed copy. Documents is the real one, OneDrive redirection included. Folders from before
 0.17.1 ("Documents\\Anim2D Templates", "Documents\\Anim2D FX Output") are moved here once.
@@ -21,6 +24,7 @@ from __future__ import annotations
 import ctypes
 import logging
 import os
+import sys
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -34,7 +38,8 @@ def _dev() -> bool:
 
 
 def documents() -> Path:
-    """The user's Documents folder as Windows has it (it may be redirected, e.g. to OneDrive)."""
+    """The user's Documents folder: as Windows has it (it may be redirected, e.g. to OneDrive), else
+    ~/Documents."""
     return known_documents() or Path.home() / "Documents"
 
 
@@ -75,10 +80,20 @@ def fx_output_dir() -> Path:
     return user_root() / "FX Output"
 
 
+def _app_name() -> str:
+    return "Anim2D-Dev" if _dev() else "Anim2D"
+
+
 def app_data() -> Path:
-    """%LOCALAPPDATA%\\Anim2D: the app's own files, which it can recreate or that only help support."""
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    return Path(base) / ("Anim2D-Dev" if _dev() else "Anim2D")
+    """The app's own files, which it can recreate or that only help support: %LOCALAPPDATA%\\Anim2D on
+    Windows, ~/Library/Application Support/Anim2D on macOS (and $XDG_DATA_HOME/Anim2D elsewhere)."""
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / _app_name()
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(base) / _app_name()
 
 
 def updates_dir() -> Path:
@@ -86,6 +101,9 @@ def updates_dir() -> Path:
 
 
 def logs_dir() -> Path:
+    """%LOCALAPPDATA%\\Anim2D\\logs on Windows, ~/Library/Logs/Anim2D on macOS."""
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Logs" / _app_name()
     return app_data() / "logs"
 
 

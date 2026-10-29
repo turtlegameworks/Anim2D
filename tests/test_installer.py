@@ -6,10 +6,11 @@ from __future__ import annotations
 import importlib.util
 import json
 import uuid
-import winreg
 from pathlib import Path
 
 import pytest
+
+winreg = pytest.importorskip("winreg", reason="the installer is the Windows one")
 
 ROOT = Path(__file__).resolve().parents[1]
 

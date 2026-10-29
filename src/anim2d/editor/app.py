@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import QEvent, QObject
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from ..resources import apply_app_icon
@@ -70,6 +71,34 @@ def _write_failure(out_dir: Path) -> None:
                                          encoding="utf-8")
 
 
+def open_path(window: EditorWindow, path: Path) -> None:
+    """Open a project, a .spine project or a Spine JSON export in the window (or say why it can't)."""
+    try:
+        doc = (Document.load(path) if path.suffix.lower() in PROJECT_SUFFIXES else
+               Document.import_spine_project(path)[0] if path.suffix.lower() == ".spine" else
+               Document.import_spine_json(path)[0])
+    except EditorError as exc:
+        QMessageBox.warning(window, APP_NAME, str(exc))
+        return
+    if window._confirm_discard():
+        window.set_document(doc)
+
+
+class FileOpenFilter(QObject):
+    """macOS hands a file opened from Finder (double-click, the Dock, Open With) to the running app as a
+    FileOpen event, not as an argument."""
+
+    def __init__(self, window: EditorWindow):
+        super().__init__(window)
+        self.window = window
+
+    def eventFilter(self, obj, event) -> bool:  # noqa: N802 - Qt's name
+        if event.type() == QEvent.Type.FileOpen and event.file():
+            open_path(self.window, Path(event.file()))
+            return True
+        return False
+
+
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
@@ -80,6 +109,7 @@ def main() -> int:
     apply_theme(app)
     apply_app_icon(app)
     window = EditorWindow()
+    app.installEventFilter(FileOpenFilter(window))
     window.show()
     if len(sys.argv) > 2 and sys.argv[1] == "--self-test":
         try:
@@ -89,14 +119,7 @@ def main() -> int:
             _write_failure(Path(sys.argv[2]))
             return 1
     if len(sys.argv) > 1:
-        path = Path(sys.argv[1])
-        try:
-            doc = (Document.load(path) if path.suffix.lower() in PROJECT_SUFFIXES else
-                   Document.import_spine_project(path)[0] if path.suffix.lower() == ".spine" else
-                   Document.import_spine_json(path)[0])
-            window.set_document(doc)
-        except EditorError as exc:
-            QMessageBox.warning(window, APP_NAME, str(exc))
+        open_path(window, Path(sys.argv[1]))
     return app.exec()
 
 
