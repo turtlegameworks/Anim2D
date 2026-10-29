@@ -82,7 +82,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - {os: macos-14, arch: AppleSilicon, label: "Apple silicon"}
+          - {os: macos-15, arch: AppleSilicon, label: "Apple silicon"}
           - {os: macos-15-intel, arch: Intel, label: "Intel"}
     env:
       DMG: dist/Anim2D-${{ needs.check.outputs.version }}-macOS-${{ matrix.arch }}.dmg
