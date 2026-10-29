@@ -245,7 +245,8 @@ def test_cancelled_download_leaves_nothing(github, tmp_path):
 
 
 def test_download_refuses_odd_file_names(tmp_path):
-    for name in ("..\\evil.exe", "notes.txt", "sub/Anim2D-Setup.exe"):
+    for name in ("..\\evil.exe", "notes.txt", "sub/Anim2D-Setup.exe", "..\\evil.dmg", ".hidden.dmg", "Anim2D.app",
+                 "Anim2D.pkg"):
         with pytest.raises(UpdateError, match="Unexpected"):
             updates.download(Asset(name, "https://example.test/x", 10), SHA, tmp_path)
 
@@ -264,3 +265,62 @@ def test_clean_cache_keeps_only_the_current_download(tmp_path, monkeypatch):
         f.write_bytes(b"x")
     updates.clean_cache(keep=keep)
     assert [p.name for p in tmp_path.iterdir()] == [keep.name]
+
+
+# --- macOS: disk images per processor
+
+def _mac_release(*arches: str):
+    data = _release_json("v0.18.0")
+    data["assets"] += [{"name": f"Anim2D-0.18.0-macOS-{arch}.dmg", "size": len(PAYLOAD),
+                        "browser_download_url": f"https://example.test/{arch}.dmg"} for arch in arches]
+    return updates.parse_release(data)
+
+
+@pytest.mark.parametrize("arch", ["AppleSilicon", "Intel"])
+def test_mac_asset_is_the_disk_image_for_the_processor(arch):
+    release = _mac_release("AppleSilicon", "Intel")
+    assert updates.mac_asset(release, arch).name == f"Anim2D-0.18.0-macOS-{arch}.dmg"
+    assert updates.installer_asset(release).name.endswith(".exe"), "Windows still gets its installer"
+
+
+def test_mac_asset_missing_for_this_processor():
+    assert updates.mac_asset(_mac_release("AppleSilicon"), "Intel") is None
+    assert updates.mac_asset(_mac_release(), "AppleSilicon") is None
+
+
+@pytest.mark.parametrize("machine, sysctl, arch", [
+    ("arm64", None, "AppleSilicon"),
+    ("x86_64", "1\n", "AppleSilicon"),  # an Intel build under Rosetta on an Apple silicon Mac
+    ("x86_64", "0\n", "Intel"),
+    ("x86_64", "", "Intel"),  # an Intel Mac has no hw.optional.arm64
+])
+def test_mac_arch(monkeypatch, machine, sysctl, arch):
+    import platform
+    monkeypatch.setattr(platform, "machine", lambda: machine)
+    monkeypatch.setattr(updates.subprocess, "run",
+                        lambda *a, **k: type("Done", (), {"stdout": sysctl if sysctl is not None else ""})())
+    assert updates.mac_arch() == arch
+
+
+def test_mac_arch_without_sysctl(monkeypatch):
+    import platform
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
+
+    def missing(*a, **k):
+        raise FileNotFoundError("sysctl")
+    monkeypatch.setattr(updates.subprocess, "run", missing)
+    assert updates.mac_arch() == "Intel"
+
+
+def test_the_built_mac_app_is_its_own_kind(monkeypatch):
+    monkeypatch.setattr(updates.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(updates.sys, "platform", "darwin")
+    assert updates.install_kind() == "mac"
+
+
+def test_a_disk_image_downloads_and_verifies(github, tmp_path):
+    routes, _ = github
+    routes["https://example.test/AppleSilicon.dmg"] = PAYLOAD
+    asset = updates.mac_asset(_mac_release("AppleSilicon"), "AppleSilicon")
+    path = updates.download(asset, SHA, tmp_path)
+    assert path == tmp_path / "Anim2D-0.18.0-macOS-AppleSilicon.dmg" and path.read_bytes() == PAYLOAD

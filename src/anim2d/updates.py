@@ -10,7 +10,8 @@ No Qt here: the editor runs these on a worker thread and shows the results (edit
         start_installer(path, install_dir(), os.getpid())   # then quit; it updates and relaunches
 
 Only an installed copy updates itself. A portable copy downloads the new portable program next to
-itself, and running from source only reports that a release exists.
+itself; the macOS app downloads the disk image for this Mac (Apple silicon or Intel) to Downloads and
+opens it, to drag into Applications; running from source only reports that a release exists.
 """
 
 from __future__ import annotations
@@ -39,6 +40,9 @@ MAX_JSON = 2 * 1024 * 1024  # a release description is far smaller; refuse anyth
 CHUNK = 256 * 1024
 INSTALLER = re.compile(r"^Anim2D-Setup-(?P<version>[\w.\-+]+)\.exe$", re.IGNORECASE)
 PORTABLE = re.compile(r"^Anim2D-Portable-(?P<version>[\w.\-+]+)\.exe$", re.IGNORECASE)
+MAC_DISK_IMAGE = re.compile(r"^Anim2D-(?P<version>[\w.\-+]+?)-macOS-(?P<arch>AppleSilicon|Intel)\.dmg$",
+                            re.IGNORECASE)
+DOWNLOAD_SUFFIXES = (".exe", ".dmg")
 CHECKSUMS = "SHA256SUMS.txt"
 _VERSION = re.compile(r"^v?(\d+)\.(\d+)(?:\.(\d+))?(.*)$")
 
@@ -184,6 +188,28 @@ def portable_asset(release: Release) -> Asset | None:
     return next((a for n, a in release.assets.items() if PORTABLE.match(n)), None)
 
 
+def mac_arch() -> str:
+    """'AppleSilicon' or 'Intel': the Mac's own processor, also when this copy runs under Rosetta."""
+    import platform
+    if platform.machine() == "arm64":
+        return "AppleSilicon"
+    try:  # an Intel build on an Apple silicon Mac reports x86_64; the hardware says otherwise
+        found = subprocess.run(["sysctl", "-n", "hw.optional.arm64"], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return "Intel"
+    return "AppleSilicon" if found.stdout.strip() == "1" else "Intel"
+
+
+def mac_asset(release: Release, arch: str | None = None) -> Asset | None:
+    """The release's disk image for arch ('AppleSilicon' or 'Intel'; this Mac's by default)."""
+    arch = (arch or mac_arch()).lower()
+    for name, asset in release.assets.items():
+        match = MAC_DISK_IMAGE.match(name)
+        if match and match["arch"].lower() == arch:
+            return asset
+    return None
+
+
 # --- downloading ---------------------------------------------------------------------------------
 
 def cache_dir() -> Path:
@@ -214,7 +240,8 @@ def download(asset: Asset, sha256: str, folder: Path | None = None,
     progress(done, total) is called as bytes arrive; return False to cancel (UpdateCancelled). A file
     already in the folder with the right checksum is reused. Nothing half-written is left behind."""
     folder = Path(folder) if folder else cache_dir()
-    if Path(asset.name).name != asset.name or not asset.name.lower().endswith(".exe"):
+    if (Path(asset.name).name != asset.name or "/" in asset.name or "\\" in asset.name
+            or asset.name.startswith(".") or not asset.name.lower().endswith(DOWNLOAD_SUFFIXES)):
         raise UpdateError(f"Unexpected download name '{asset.name}'.")
     sha256 = sha256.lower()
     target = folder / asset.name
@@ -276,13 +303,16 @@ def clean_cache(keep: Path | None = None) -> None:
 # --- this copy and the hand-off ------------------------------------------------------------------
 
 def install_kind() -> str:
-    """'installed' (by the installer, so it can update itself), 'portable', 'source', or 'dev' (a local
-    test build from tools/dev_build.py, which never updates itself)."""
+    """'installed' (by the installer, so it can update itself), 'portable', 'mac' (the macOS app, updated
+    from its disk image), 'source', or 'dev' (a local test build from tools/dev_build.py, which never
+    updates itself)."""
     if not getattr(sys, "frozen", False):
         return "source"
     from .resources import is_dev_build
     if is_dev_build():
         return "dev"
+    if sys.platform == "darwin":
+        return "mac"
     return "installed" if (install_dir() / "install.json").is_file() else "portable"
 
 

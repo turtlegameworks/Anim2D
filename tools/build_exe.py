@@ -8,6 +8,8 @@ Output:
   dist\Anim2D-Setup-<version>.exe    per-user installer with Start-menu/desktop shortcuts and uninstaller
 
 Verify a build: Anim2D.exe --self-test <folder>   /   Anim2D.exe --fx-builder --self-test <folder>
+
+The macOS app and its disk images are built by tools/build_mac.py, with the same pyinstaller().
 """
 
 from __future__ import annotations
@@ -31,10 +33,12 @@ QT_EXCLUDES = ["PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets", "PySide6
 
 
 def pyinstaller(name: str, script: Path, *, data: list[tuple[Path, str]], excludes: list[str],
-                distpath: Path, icon: Path = ICON, work: Path = BUILD, log=None) -> Path:
-    """One onefile, windowed program. work holds PyInstaller's spec and work files; log, if given, is a
-    file that receives PyInstaller's output instead of the console (tools/dev_build.py)."""
-    args = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--windowed",
+                distpath: Path, icon: Path = ICON, work: Path = BUILD, log=None, extra: list[str] = ()) -> Path:
+    """One windowed program: a single .exe on Windows, an .app bundle (one folder) on macOS. work holds
+    PyInstaller's spec and work files; log, if given, is a file that receives PyInstaller's output instead
+    of the console (tools/dev_build.py); extra are more PyInstaller options (tools/build_mac.py)."""
+    bundle = "--onedir" if sys.platform == "darwin" else "--onefile"  # a onefile .app is deprecated
+    args = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", bundle, "--windowed", *extra,
             "--name", name, "--icon", str(icon), "--paths", str(ROOT / "src"),
             "--distpath", str(distpath), "--workpath", str(work / "pyinstaller" / name), "--specpath", str(work)]
     for source, dest in data:
@@ -42,21 +46,25 @@ def pyinstaller(name: str, script: Path, *, data: list[tuple[Path, str]], exclud
     for module in excludes:
         args += ["--exclude-module", module]
     subprocess.run([*args, str(script)], check=True, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT if log else None)
-    return distpath / f"{name}.exe"
+    return distpath / (f"{name}.app" if sys.platform == "darwin" else f"{name}.exe")
+
+
+def launcher_script() -> Path:
+    launchers = BUILD / "launchers"
+    launchers.mkdir(parents=True, exist_ok=True)
+    program_script = launchers / "Anim2D.py"
+    program_script.write_text("from anim2d.launcher import main\nraise SystemExit(main())\n", encoding="utf-8")
+    return program_script
+
+
+# Resources go where anim2d.resources.bundle_root() looks for them: <bundle>/anim2d/...
+PROGRAM_DATA = [(PACKAGE / "preset_library", "anim2d/preset_library"), (PACKAGE / "assets", "anim2d/assets")]
 
 
 def main() -> None:
     # --dist DIR writes the program and installer elsewhere (e.g. while dist\Anim2D.exe is running).
     dist = Path(sys.argv[sys.argv.index("--dist") + 1]).resolve() if "--dist" in sys.argv else DIST
-    launchers = BUILD / "launchers"
-    launchers.mkdir(parents=True, exist_ok=True)
-    program_script = launchers / "Anim2D.py"
-    program_script.write_text("from anim2d.launcher import main\nraise SystemExit(main())\n", encoding="utf-8")
-    # Resources go where anim2d.resources.bundle_root() looks for them: <bundle>/anim2d/...
-    program = pyinstaller("Anim2D", program_script,
-                          data=[(PACKAGE / "preset_library", "anim2d/preset_library"),
-                                (PACKAGE / "assets", "anim2d/assets")],
-                          excludes=QT_EXCLUDES, distpath=dist)
+    program = pyinstaller("Anim2D", launcher_script(), data=PROGRAM_DATA, excludes=QT_EXCLUDES, distpath=dist)
     print(f"built {program}")
 
     version_file = BUILD / "VERSION"

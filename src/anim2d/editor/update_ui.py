@@ -160,17 +160,19 @@ class UpdateController(QObject):
     # installing
 
     def install(self, release: updates.Release, parent=None) -> None:
-        """Download, verify and hand over to the installer (installed copies), or save the new portable
-        program next to this one (portable copies)."""
+        """Download, verify and hand over to the installer (installed copies), save the new portable
+        program next to this one (portable copies), or save this Mac's disk image to Downloads and open it
+        (the macOS app)."""
         parent = parent or self.window
         kind = updates.install_kind()
-        asset = updates.installer_asset(release) if kind == "installed" else updates.portable_asset(release)
+        pick = {"installed": updates.installer_asset, "mac": updates.mac_asset}.get(kind, updates.portable_asset)
+        asset = pick(release)
         if kind in ("source", "dev") or asset is None:
             self.open_page(release)
             return
         if kind == "installed" and not self.window._confirm_discard():  # save or discard before closing
             return
-        folder = None if kind == "installed" else _portable_folder()
+        folder = _portable_folder() if kind == "portable" else Path.home() / "Downloads" if kind == "mac" else None
         progress = QProgressDialog(f"Downloading {asset.name}…", "Cancel", 0, 1000, parent)
         progress.setWindowTitle(f"Updating {APP_NAME}")
         progress.setWindowModality(Qt.WindowModality.WindowModal)
@@ -219,6 +221,16 @@ class UpdateController(QObject):
         self._start(job)
 
     def _downloaded(self, release: updates.Release, path: Path, kind: str) -> None:
+        if kind == "mac":
+            box = QMessageBox(QMessageBox.Icon.Information, f"{APP_NAME} {release.version} downloaded",
+                              f"Saved {path.name} in\n{path.parent}\n\nOpen it, quit {APP_NAME}, and drag {APP_NAME} "
+                              "into Applications, replacing the old one.", parent=self.window)
+            disk_image = box.addButton("Open disk image", QMessageBox.ButtonRole.ActionRole)
+            box.addButton(QMessageBox.StandardButton.Ok)
+            box.exec()
+            if box.clickedButton() is disk_image:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))  # Finder mounts it and shows it
+            return
         if kind == "portable":
             box = QMessageBox(QMessageBox.Icon.Information, f"{APP_NAME} {release.version} downloaded",
                               f"Saved {path.name} in\n{path.parent}\n\nClose this copy and start the new one. "
@@ -284,13 +296,16 @@ class UpdateDialog(QDialog):
                          "on the new version.",
             "portable": "This is the portable program, so the new version is downloaded next to it for you to "
                         "start instead.",
+            "mac": "Download saves the disk image for this Mac (Apple silicon or Intel) in Downloads and checks it. "
+                   f"Open it and drag the new {APP_NAME} into Applications.",
             "source": "You're running from source: update with git pull, or download a release.",
             "dev": "This is a local test build, which never updates itself. Install the release to try it.",
         }[kind])
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #8f8f8f;")
         buttons = QDialogButtonBox()
-        main_text = {"installed": "Install update", "portable": "Download"}.get(kind, "Open release page")
+        main_text = {"installed": "Install update", "portable": "Download", "mac": "Download"}
+        main_text = main_text.get(kind, "Open release page")
         main = buttons.addButton(main_text, QDialogButtonBox.ButtonRole.AcceptRole)
         main.setDefault(True)
         if kind not in ("source", "dev"):
