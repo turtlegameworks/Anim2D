@@ -31,9 +31,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest==9.1.1", "ruff==0.17.1"]
 build = ["pyinstaller==6.22.3"]
+site = ["markdown==3.11.2"]  # tools/build_site.py: the website and its docs pages
 
 [project.urls]
-Homepage = "https://github.com/turtlegameworks/Anim2D"
+Homepage = "https://turtlegameworks.github.io/Anim2D/"
+Documentation = "https://turtlegameworks.github.io/Anim2D/docs/"
+Source = "https://github.com/turtlegameworks/Anim2D"
 Issues = "https://github.com/turtlegameworks/Anim2D/issues"
 
 [project.scripts]

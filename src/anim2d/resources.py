@@ -22,7 +22,9 @@ ORGANIZATION = "Anim2D"
 DEV_ORGANIZATION = "Anim2D-Dev"  # settings of local test builds, apart from the real app's
 VERSION = __version__
 REPOSITORY = "turtlegameworks/Anim2D"  # GitHub owner/name: releases, issues, update checks
-HOMEPAGE = f"https://github.com/{REPOSITORY}"
+HOMEPAGE = f"https://github.com/{REPOSITORY}"  # source, issues and releases
+WEBSITE = "https://turtlegameworks.github.io/Anim2D"  # the product site (GitHub Pages, tools/build_site.py)
+DOCS_URL = f"{WEBSITE}/docs/"
 
 # (new application name, (old organization, old application)) for QSettings
 _SETTINGS = {
