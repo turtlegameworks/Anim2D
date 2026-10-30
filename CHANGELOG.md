@@ -3,7 +3,10 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
-## Unreleased
+## 0.18.1 (unreleased)
+
+Fixes for the Mac app, and a website. 0.18.0 can't update itself on a Mac: download this version from the release
+page.
 
 ### Added
 
@@ -13,9 +16,12 @@ minor versions may change file formats, but older files keep opening.
 
 ### Fixed
 
+* Preferences and About Anim2D closed with an error (`KeyError: 'mac'`) on the Mac app.
+* Check for Updates failed on macOS with `CERTIFICATE_VERIFY_FAILED`: the app had no certificates to check
+  GitHub's against. Update checks now use the certificates the system trusts (the Keychain on macOS).
 * The editor guide's Setup mode screenshot was missing.
 
-## 0.18.0 (unreleased)
+## 0.18.0 (2026-10-29)
 
 Anim2D runs on Macs.
 

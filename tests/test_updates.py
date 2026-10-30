@@ -58,7 +58,7 @@ def github(monkeypatch):
     routes: dict[str, object] = {}
     seen = []
 
-    def urlopen(request, timeout=None):
+    def urlopen(request, timeout=None, context=None):
         seen.append(request)
         answer = routes[request.full_url]
         if isinstance(answer, BaseException):
@@ -131,14 +131,14 @@ class _BrokenResponse(FakeResponse):
     (TimeoutError(), "stopped answering"),
 ], ids=["reset", "incomplete", "timeout"])
 def test_failures_while_reading_the_answer(github, monkeypatch, error, message):
-    monkeypatch.setattr(updates.urllib.request, "urlopen", lambda request, timeout=None: _BrokenResponse(error))
+    monkeypatch.setattr(updates.urllib.request, "urlopen", lambda request, timeout=None, context=None: _BrokenResponse(error))
     with pytest.raises(UpdateError, match=message):
         updates.fetch_latest()
 
 
 def test_connection_dropped_during_download(github, tmp_path, monkeypatch):
     monkeypatch.setattr(updates.urllib.request, "urlopen",
-                        lambda request, timeout=None: _BrokenResponse(http.client.IncompleteRead(b"x")))
+                        lambda request, timeout=None, context=None: _BrokenResponse(http.client.IncompleteRead(b"x")))
     asset = Asset("Anim2D-Setup-0.17.0.exe", "https://example.test/setup.exe", len(PAYLOAD))
     with pytest.raises(UpdateError, match="stopped before it finished"):
         updates.download(asset, SHA, tmp_path)
@@ -324,3 +324,16 @@ def test_a_disk_image_downloads_and_verifies(github, tmp_path):
     asset = updates.mac_asset(_mac_release("AppleSilicon"), "AppleSilicon")
     path = updates.download(asset, SHA, tmp_path)
     assert path == tmp_path / "Anim2D-0.18.0-macOS-AppleSilicon.dmg" and path.read_bytes() == PAYLOAD
+
+
+def test_update_checks_trust_the_systems_certificates(monkeypatch):
+    # The macOS app bundles no CA file, so Python's default context verified nothing (CERTIFICATE_VERIFY_FAILED).
+    assert type(updates.tls_context()).__module__.startswith("truststore")
+    contexts = []
+
+    def urlopen(request, timeout=None, context=None):
+        contexts.append(context)
+        return FakeResponse(json.dumps(_release_json()).encode())
+    monkeypatch.setattr(updates.urllib.request, "urlopen", urlopen)
+    updates.fetch_latest()
+    assert contexts == [updates.tls_context()]

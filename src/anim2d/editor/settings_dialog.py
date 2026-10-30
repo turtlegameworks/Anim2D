@@ -237,6 +237,9 @@ class SettingsDialog(QDialog):
                          "work before it restarts.",
             "portable": "This is the portable program: a new version is downloaded next to it for you to start "
                         "instead. Install Anim2D to get one-click updates.",
+            "mac": "Updates download from the project's GitHub releases: the disk image for this Mac (Apple "
+                   "silicon or Intel) is saved to Downloads and checked against the release's SHA-256 checksums. "
+                   f"Open it and drag the new {APP_NAME} into Applications.",
             "dev": "This is a local test build: it never checks or updates by itself, and never touches the "
                    "installed Anim2D. Check now still tells you about new releases.",
             "source": "You're running from source, so there are no automatic checks. Check now still tells you "
