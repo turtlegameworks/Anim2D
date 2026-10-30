@@ -3,6 +3,18 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
+## Unreleased
+
+### Added
+
+* **A website**, [turtlegameworks.github.io/Anim2D](https://turtlegameworks.github.io/Anim2D/): downloads for this
+  computer from the latest release, and every guide as a web page. **Help → Documentation** (F1) opens the guides;
+  About has **Website** and **Documentation** buttons.
+
+### Fixed
+
+* The editor guide's Setup mode screenshot was missing.
+
 ## 0.18.0 (unreleased)
 
 Anim2D runs on Macs.

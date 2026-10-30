@@ -353,6 +353,7 @@ class EditorWindow(QMainWindow):
         self._action(h, "Search commands…", self.search_commands, "Ctrl+Space",
                      "Find any command by typing part of its name, then press Enter")
         self._action(h, "Shortcuts", self.show_shortcuts)
+        self._action(h, "Documentation", self.open_documentation, "F1", "Open the Anim2D guides on the website")
         h.addSeparator()
         self._action(h, "Check for Updates…", lambda: self.updates.check(manual=True),
                      tip="See whether a newer version of Anim2D is out")
@@ -976,6 +977,12 @@ class EditorWindow(QMainWindow):
 
     def appearance(self) -> None:
         self.open_settings("Appearance")
+
+    def open_documentation(self) -> None:
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from ..resources import DOCS_URL
+        QDesktopServices.openUrl(QUrl(DOCS_URL))
 
     def report_bug(self) -> None:
         from PySide6.QtCore import QUrl

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anim2D: free 2D skeletal animation editor and FX builder</title>
+  <meta name="description" content="Anim2D is a free, open-source 2D skeletal animation editor and FX builder for Windows and macOS. Rig, animate and export for Unity, Godot, Cocos, Phaser, Pixi, libGDX and more.">
+  <meta property="og:title" content="Anim2D">
+  <meta property="og:description" content="Free, open-source 2D skeletal animation editor and FX builder for Windows and macOS.">
+  <meta property="og:image" content="docs/screenshots/editor_editor.png">
+  <link rel="icon" href="assets/icon-64.png">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./"><img src="assets/icon-64.png" alt="" width="28" height="28"> Anim2D</a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#fx">FX</a>
+      <a href="docs/">Docs</a>
+      <a href="https://github.com/turtlegameworks/Anim2D">GitHub</a>
+      <a class="button small" href="#download">Download</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Free and open source · Windows and macOS</p>
+        <h1>Rig, animate and ship 2D characters.</h1>
+        <p class="lead">Anim2D is a skeletal animation editor with bones, meshes and constraints, a dopesheet and graph
+          editor, and an FX builder with 37 ready-made effects. Export straight into the runtimes your game already uses.</p>
+        <div class="cta">
+          <a class="button" id="primary-download" href="https://github.com/turtlegameworks/Anim2D/releases/latest">Download Anim2D</a>
+          <a class="button ghost" href="docs/">Read the docs</a>
+        </div>
+        <p class="fine" id="primary-note">Windows 10/11 · macOS 14+ on Apple silicon and Intel · MIT License</p>
+      </div>
+      <img class="hero-shot" src="docs/screenshots/editor_editor.png" width="1500" height="920"
+           alt="The Anim2D editor with a rigged character, the bone tree and the properties panel">
+    </section>
+
+    <section class="engines" aria-label="Works with">
+      <span>Exports for</span>
+      <ul>
+        <li>Unity</li><li>Godot</li><li>Cocos</li><li>Phaser</li><li>Pixi</li><li>libGDX</li><li>and other runtimes</li>
+      </ul>
+    </section>
+
+    <section id="features" class="features">
+      <h2>Everything a 2D rig needs</h2>
+      <div class="grid">
+        <article>
+          <h3>Rigging</h3>
+          <p>Bones with shear and inheritance, slots and draw order, skins with their own bones and constraints,
+            IK, transform and path constraints, bounding boxes and clipping.</p>
+        </article>
+        <article>
+          <h3>Meshes and weights</h3>
+          <p>Edit meshes or trace them from an image's alpha, paint weights, link meshes and key deforms.</p>
+        </article>
+        <article>
+          <h3>Animation</h3>
+          <p>A dopesheet and a bezier graph editor, ease presets, retiming, motion paths, onion skinning,
+            crossfade preview, events with audio and reference footage for rotoscoping.</p>
+        </article>
+        <article>
+          <h3>Tools</h3>
+          <p>Auto-rig, physics baking, mirror and pose tools, frame sequences, PSD and OpenRaster import with
+            live resync, command search, customisable shortcuts and themes.</p>
+        </article>
+        <article>
+          <h3>File formats</h3>
+          <p>Opens skeletal animation JSON, binary and editor project files. Exports JSON or binary
+            <code>.skel</code> with a packed <code>.atlas</code>.</p>
+        </article>
+        <article>
+          <h3>Export</h3>
+          <p>A texture packer and unpacker; GIF, APNG, WebP, MP4, AVI, MOV, PSD and image sequences; and a
+            Unity bridge that exports straight into a spine-unity project.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="showcase">
+      <figure>
+        <img src="docs/screenshots/editor_animate_mode.png" width="1600" height="960" loading="lazy"
+             alt="Animate mode with the timeline and dopesheet">
+        <figcaption><strong>Animate mode.</strong> Key poses on the timeline, shape them in the dopesheet and
+          graph, and preview crossfades between animations.</figcaption>
+      </figure>
+      <figure>
+        <img src="docs/screenshots/editor_mesh_weights.png" width="1500" height="920" loading="lazy"
+             alt="Weight painting on a mesh">
+        <figcaption><strong>Meshes and weights.</strong> Trace meshes from your art and paint how each
+          vertex follows its bones.</figcaption>
+      </figure>
+    </section>
+
+    <section id="fx" class="fx">
+      <div>
+        <h2>An FX builder in the box</h2>
+        <p>Pick one of 37 parametric effects, such as impacts, slashes, explosions, coin bursts, hearts and
+          level-ups. Tune it with sliders and export it as a skeleton you can drop into a character or straight
+          into your game. Register effects from your own Spine exports as new templates.</p>
+        <p><a href="docs/fx_presets.html">Browse the preset catalogue →</a></p>
+      </div>
+      <div class="fx-strip" aria-label="A few of the FX presets">
+        <img src="docs/screenshots/fx_presets/firework.gif" alt="Firework preset" loading="lazy" width="160" height="160">
+        <img src="docs/screenshots/fx_presets/coin_fountain.gif" alt="Coin fountain preset" loading="lazy" width="160" height="160">
+        <img src="docs/screenshots/fx_presets/critical_hit.gif" alt="Critical hit preset" loading="lazy" width="160" height="160">
+        <img src="docs/screenshots/fx_presets/bubble_pop.gif" alt="Bubble pop preset" loading="lazy" width="160" height="160">
+      </div>
+    </section>
+
+    <section id="download" class="download">
+      <h2>Download</h2>
+      <p class="lead" id="release-line">The latest release, for Windows and macOS.</p>
+      <div class="downloads">
+        <a class="card" data-asset="Anim2D-Setup-{v}.exe" data-os="windows"
+           href="https://github.com/turtlegameworks/Anim2D/releases/latest">
+          <strong>Windows</strong><span>Installer, with updates built in</span></a>
+        <a class="card" data-asset="Anim2D-Portable-{v}.exe" data-os="windows-portable"
+           href="https://github.com/turtlegameworks/Anim2D/releases/latest">
+          <strong>Windows portable</strong><span>One file, nothing installed</span></a>
+        <a class="card" data-asset="Anim2D-{v}-macOS-AppleSilicon.dmg" data-os="mac-arm"
+           href="https://github.com/turtlegameworks/Anim2D/releases/latest">
+          <strong>macOS · Apple silicon</strong><span>M1 and later, macOS 14+</span></a>
+        <a class="card" data-asset="Anim2D-{v}-macOS-Intel.dmg" data-os="mac-intel"
+           href="https://github.com/turtlegameworks/Anim2D/releases/latest">
+          <strong>macOS · Intel</strong><span>macOS 14+</span></a>
+      </div>
+      <p class="fine">The builds aren't code-signed yet. On Windows, SmartScreen may ask: choose <em>More info →
+        Run anyway</em>. On a Mac, the first time: <em>System Settings → Privacy &amp; Security → Open Anyway</em>.
+        Each release lists SHA-256 checksums. <a href="https://github.com/turtlegameworks/Anim2D/releases">All
+        releases and their notes</a> · <a href="docs/install.html">Install guide</a></p>
+    </section>
+
+    <section class="docs-teaser">
+      <h2>Learn it</h2>
+      <div class="grid">
+        <a class="doc" href="docs/editor.html"><strong>Editor guide</strong><span>Every panel, tool and shortcut</span></a>
+        <a class="doc" href="docs/fx_presets.html"><strong>FX presets</strong><span>All 37 effects, with previews</span></a>
+        <a class="doc" href="docs/preset_authoring.html"><strong>Preset authoring</strong><span>Write your own parametric effects</span></a>
+        <a class="doc" href="docs/template_round_trip.html"><strong>Template round trip</strong><span>Turn Spine exports into templates</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Anim2D is free software under the <a href="https://github.com/turtlegameworks/Anim2D/blob/main/LICENSE">MIT
+      License</a>. Not affiliated with Esoteric Software.</p>
+    <p><a href="https://github.com/turtlegameworks/Anim2D">Source</a> ·
+      <a href="https://github.com/turtlegameworks/Anim2D/issues/new/choose">Report a bug</a> ·
+      <a href="https://github.com/turtlegameworks/Anim2D/blob/main/CHANGELOG.md">Changelog</a></p>
+  </footer>
+  <script src="assets/main.js"></script>
+</body>
+</html>
