@@ -1,6 +1,9 @@
 """Draws the Anim2D app icon (original art) into src/anim2d/assets/anim2d.ico.
 
     python tools/make_icon.py
+
+The mark is the bone "i" from the Anim2D wordmark (tools/make_logo.py): a joint dot, a tapered bone and a
+ring joint, in the wordmark's orange on its ink colour.
 """
 
 from __future__ import annotations
@@ -11,31 +14,29 @@ from PIL import Image, ImageDraw
 
 OUT = Path(__file__).resolve().parents[1] / "src" / "anim2d" / "assets" / "anim2d.ico"
 S = 1024  # drawn large, downsampled per icon size
+INK = (38, 38, 38, 255)
+ORANGE = (251, 162, 8, 255)
 
 
 def draw() -> Image.Image:
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle((40, 40, S - 40, S - 40), radius=200, fill=(36, 39, 48, 255))
-    # Two bones (tapered diamonds) joined at an elbow, like the editor's bone glyphs.
-    orange, light = (255, 170, 60, 255), (255, 214, 150, 255)
+    d.rounded_rectangle((40, 40, S - 40, S - 40), radius=200, fill=INK)
+    # Measured on the wordmark (x centred on 0, y from its top), scaled to fill the tile.
+    k, cx, top = 2.45, S / 2, S / 2 - 2.45 * 313
 
-    def bone(x0, y0, x1, y1, width):
-        dx, dy = x1 - x0, y1 - y0
-        length = (dx * dx + dy * dy) ** 0.5
-        nx, ny = -dy / length * width, dx / length * width
-        kx, ky = x0 + dx * 0.18, y0 + dy * 0.18
-        d.polygon([(x0, y0), (kx + nx, ky + ny), (x1, y1), (kx - nx, ky - ny)], fill=orange)
+    def at(x: float, y: float) -> tuple[float, float]:
+        return cx + x * k, top + y * k
 
-    bone(250, 760, 560, 430, 70)
-    bone(560, 430, 800, 250, 55)
-    for (x, y), r in (((250, 760), 70), ((560, 430), 62), ((800, 250), 48)):
-        d.ellipse((x - r, y - r, x + r, y + r), fill=light, outline=(36, 39, 48, 255), width=18)
-    # A small spark for the FX side.
-    cx, cy = 770, 720
-    for (ax, ay), (bx, by) in (((0, -150), (0, 150)), ((-150, 0), (150, 0))):
-        d.polygon([(cx + ax, cy + ay), (cx + 30, cy), (cx + bx, cy + by), (cx - 30, cy)], fill=(127, 224, 208, 255))
-        d.polygon([(cx + ay, cy + ax), (cx, cy + 30), (cx + by, cy + bx), (cx, cy - 30)], fill=(127, 224, 208, 255))
+    def circle(x: float, y: float, r: float, fill) -> None:
+        (px, py), pr = at(x, y), r * k
+        d.ellipse((px - pr, py - pr, px + pr, py + pr), fill=fill)
+
+    circle(0, 195, 35, ORANGE)  # the dot
+    circle(0, 254, 9, ORANGE)  # the bone's rounded top
+    d.polygon([at(-9, 254), at(9, 254), at(33, 398), at(-33, 398)], fill=ORANGE)
+    circle(-2, 422, 45, ORANGE)  # the ring joint
+    circle(-2, 422, 20, INK)
     return img
 
 

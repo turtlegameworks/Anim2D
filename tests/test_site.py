@@ -22,7 +22,7 @@ def site(tmp_path_factory):
 
 def test_every_page_is_built(site):
     assert (site / "index.html").is_file() and (site / ".nojekyll").is_file()
-    assert (site / "assets" / "icon-64.png").is_file()
+    assert (site / "assets" / "icon-64.png").is_file() and (site / "assets" / "anim2d-logo-light.png").is_file()
     for md in (ROOT / "docs").glob("*.md"):
         assert (site / "docs" / f"{md.stem}.html").is_file(), md.name
     assert (site / "docs" / "index.html").is_file() and (site / "docs" / "install.html").is_file()

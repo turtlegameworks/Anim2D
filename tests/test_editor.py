@@ -411,3 +411,33 @@ def test_editor_window_smoke(qapp, tmp_path, rig, library):
     assert win.state.selection.name == f"{dialog.result.prefix}_root"
     rig.dirty = False
     win.close()
+
+
+def test_insert_fx_on_every_event(tmp_path, library):
+    doc = Document(images_dir=tmp_path / "images")
+    doc.add_event("hit")
+    doc.data["animations"]["attack"] = {"events": [{"time": 0.2, "name": "hit"}, {"time": 0.5, "name": "hit"}]}
+    preset = library.get("impact_basic")
+    settings, _ = validate_settings(preset, "fx_hit_01", {})
+    with pytest.raises(EditorError, match="doesn't fire"):
+        insert_fx(doc, preset, settings, "root", "idle", 0, trigger_event="hit")
+    result = insert_fx(doc, preset, settings, "root", "attack", 0, trigger_event="hit")
+    assert result.start == pytest.approx(0.2)
+    keys = doc.animation("attack")["slots"]["fx_hit_01_flash_slot"]["attachment"]
+    shown = [k["time"] for k in keys if k.get("name")]
+    assert shown[0] == pytest.approx(0.2) and any(t == pytest.approx(0.5) for t in shown), "plays at each hit"
+    hidden = [k["time"] for k in keys if not k.get("name")]
+    assert any(0.2 < t <= 0.5 for t in hidden), "the first play is hidden by the time the second starts"
+    times = [k["time"] for k in keys]
+    assert times == sorted(times)
+    assert doc.validate()[0] == []
+
+
+def test_insert_an_animation_set(tmp_path, library):
+    doc = Document(images_dir=tmp_path / "images")
+    preset = library.get("dust_motes")
+    settings, _ = validate_settings(preset, "fx_dust_01", {"animation_set": True, "count": 10})
+    result = insert_fx(doc, preset, settings, "root", "ambient", 0)
+    assert {"ambient_intro", "ambient_loop", "ambient_outro"} <= set(doc.animation_names())
+    assert any("animation set" in w for w in result.warnings)
+    assert doc.validate()[0] == []

@@ -8,7 +8,7 @@ from typing import Callable
 from ..models.effect import EffectDocument
 from ..models.preset import PresetDefinition
 from ..models.settings import EffectSettings
-from . import casual_generators, generators, more_generators, slot_generators, ui_generators
+from . import casual_generators, emitter_generators, generators, more_generators, slot_generators, ui_generators
 from .builder import EffectBuilder
 
 Generator = Callable[[EffectBuilder, random.Random], None]
@@ -51,6 +51,7 @@ GENERATORS: dict[str, tuple[int, Generator]] = {
     "orbit_stars": (1, ui_generators.orbit_stars),
     "float_letters": (1, ui_generators.float_letters),
     "flame_rise": (1, ui_generators.flame_rise),
+    "particle_emitter": (1, emitter_generators.particle_emitter),
 }
 
 

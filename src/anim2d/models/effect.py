@@ -143,3 +143,6 @@ class EffectDocument:
     slot_timelines: dict[str, SlotTimelines] = field(default_factory=dict)
     images: dict[str, Path] = field(default_factory=dict)  # image_id -> source PNG
     warnings: list[str] = field(default_factory=list)
+    # More animations of the same bones and slots, as an animation set (intro, loop, outro): full animation
+    # name -> (bone timelines, slot timelines), with the same timing. Exported after animation_name.
+    extra_animations: dict[str, tuple[dict[str, "BoneTimelines"], dict[str, "SlotTimelines"]]] =         field(default_factory=dict)

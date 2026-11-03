@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="src/anim2d/assets/anim2d.ico" width="96" alt="Anim2D icon">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/anim2d/assets/anim2d-logo-light.png">
+  <img src="src/anim2d/assets/anim2d-logo.png" width="360" alt="Anim2D">
+</picture>
 
 # Anim2D
 

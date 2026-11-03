@@ -14,7 +14,7 @@ from ..ui.preset_browser import PresetBrowser
 from ..ui.preview_widget import PreviewPanel
 from ..ui.settings_panel import SettingsPanel
 from .document import Document, EditorError
-from .fx_insert import InsertResult, insert_fx
+from .fx_insert import InsertResult, event_times, insert_fx
 
 
 class InsertFxDialog(QDialog):
@@ -51,11 +51,19 @@ class InsertFxDialog(QDialog):
         self.bone_combo.currentTextChanged.connect(lambda _: self._validate())
         self.animation_combo.currentTextChanged.connect(lambda _: self._validate())
         self.start_spin.valueChanged.connect(lambda _: self._validate())
+        self.event_combo = QComboBox()
+        self.event_combo.addItem("Start time (no event)", None)
+        for event in sorted(doc.data["events"]):
+            self.event_combo.addItem(event, event)
+        self.event_combo.setToolTip("Play the FX each time this event fires in the animation, instead of once "
+                                    "at the start time")
+        self.event_combo.currentIndexChanged.connect(lambda _: self._validate())
 
         placement = QFormLayout()
         placement.addRow("Attach to bone", self.bone_combo)
         placement.addRow("Animation", self.animation_combo)
         placement.addRow("Start at", self.start_spin)
+        placement.addRow("Trigger on event", self.event_combo)
 
         self.preview = PreviewPanel()
         self.settings = SettingsPanel("Inserted into the open skeleton (images copied to its images folder)")
@@ -170,11 +178,21 @@ class InsertFxDialog(QDialog):
             item = QListWidgetItem(f"⚠ {text}")
             item.setForeground(QColor("#f0b44c"))
             self.messages.addItem(item)
+        event = self.event_combo.currentData()
+        animation = self.animation_combo.currentText().strip()
+        self.start_spin.setEnabled(event is None)
+        times = event_times(self.doc, animation, event) if event else []
+        if event and not times:
+            errors.insert(0, f"The event '{event}' doesn't fire in '{animation}'.")
         if not errors:
-            end = self.start_spin.value() + (evaluator.duration if evaluator else 0)
-            self.messages.addItem(f"✔ Adds keys to '{self.animation_combo.currentText().strip()}' from "
-                                  f"{self.start_spin.value():.3f}s to {end:.3f}s, attached to "
-                                  f"'{self.bone_combo.currentText()}'.")
+            if event:
+                self.messages.addItem(f"✔ Plays on each '{event}' in '{animation}' ({len(times)} time(s), from "
+                                      f"{times[0]:.3f}s), attached to '{self.bone_combo.currentText()}'.")
+            else:
+                end = self.start_spin.value() + (evaluator.duration if evaluator else 0)
+                self.messages.addItem(f"✔ Adds keys to '{animation}' from "
+                                      f"{self.start_spin.value():.3f}s to {end:.3f}s, attached to "
+                                      f"'{self.bone_combo.currentText()}'.")
         self.insert_button.setEnabled(not errors)
         return not errors
 
@@ -184,7 +202,8 @@ class InsertFxDialog(QDialog):
         settings, _ = self.session.validate()
         try:
             self.result = insert_fx(self.doc, self.session.preset, settings, self.bone_combo.currentText(),
-                                    self.animation_combo.currentText().strip(), self.start_spin.value())
+                                    self.animation_combo.currentText().strip(), self.start_spin.value(),
+                                    trigger_event=self.event_combo.currentData())
         except EditorError as exc:
             item = QListWidgetItem(f"✖ {exc}")
             item.setForeground(QColor("#ff6b6b"))

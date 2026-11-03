@@ -12,11 +12,11 @@ import sys
 from dataclasses import dataclass
 
 from PySide6.QtCore import QSettings, Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QPixmap
 from PySide6.QtWidgets import (QCheckBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
                                QMessageBox, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget)
 
-from ..resources import APP_NAME, DOCS_URL, HOMEPAGE, VERSION, WEBSITE, icon_path, system_description
+from ..resources import APP_NAME, DOCS_URL, HOMEPAGE, VERSION, WEBSITE, logo_path, system_description
 from . import document
 from .form_widgets import SliderField, section
 
@@ -292,15 +292,17 @@ class SettingsDialog(QDialog):
     def _about(self) -> QWidget:
         from PySide6 import __version__ as pyside_version
         from PySide6.QtCore import qVersion
-        icon = QLabel()
-        if icon_path().is_file():
-            icon.setPixmap(QIcon(str(icon_path())).pixmap(64, 64))
-        title = QLabel(f"<b style='font-size:18px'>{APP_NAME}</b><br>Version {VERSION}")
+        logo = logo_path(self.palette().window().color().lightness() < 128)
         head = QWidget()
-        row = QHBoxLayout(head)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.addWidget(icon)
-        row.addWidget(title, 1)
+        column = QVBoxLayout(head)
+        column.setContentsMargins(0, 0, 0, 0)
+        if logo.is_file():
+            wordmark = QLabel()
+            wordmark.setPixmap(QPixmap(str(logo)).scaledToHeight(48, Qt.TransformationMode.SmoothTransformation))
+            wordmark.setAccessibleName(APP_NAME)
+            column.addWidget(wordmark)
+        column.addWidget(QLabel(f"Version {VERSION}" if logo.is_file()
+                                else f"<b style='font-size:18px'>{APP_NAME}</b><br>Version {VERSION}"))
         from .. import logs
         self.system_info = (f"{APP_NAME} {VERSION}\n{system_description()}\n"
                             f"Python {platform.python_version()} · Qt {qVersion()} · PySide6 {pyside_version}\n"

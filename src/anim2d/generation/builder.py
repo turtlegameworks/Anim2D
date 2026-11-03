@@ -36,6 +36,8 @@ class EffectBuilder:
         self.primary = Color.from_hex(settings["primary_color"])
         self.secondary = Color.from_hex(settings["secondary_color"])
         self.opacity = float(settings["opacity"])
+        self._target = (self.doc.bone_timelines, self.doc.slot_timelines)  # where keys go (start_animation)
+        self._started = False
 
     # --- structure -------------------------------------------------------------------------
 
@@ -75,11 +77,22 @@ class EffectBuilder:
 
     # --- timelines -------------------------------------------------------------------------
 
+    def start_animation(self, suffix: str) -> None:
+        """Key an animation of its own from here on, <prefix>_<suffix>, for an animation set. The first
+        becomes the effect's animation, later ones its extra animations."""
+        name = f"{self.prefix}_{suffix}"
+        if not self._started:
+            self._started = True
+            self.doc.animation_name = name
+            return
+        self._target = ({}, {})
+        self.doc.extra_animations[name] = self._target
+
     def _bone_tl(self, bone: str) -> BoneTimelines:
-        return self.doc.bone_timelines.setdefault(bone, BoneTimelines())
+        return self._target[0].setdefault(bone, BoneTimelines())
 
     def _slot_tl(self, slot: str) -> SlotTimelines:
-        return self.doc.slot_timelines.setdefault(slot, SlotTimelines())
+        return self._target[1].setdefault(slot, SlotTimelines())
 
     def translate(self, bone: str, u: float, x: float, y: float, curve: Curve = None) -> None:
         self._bone_tl(bone).translate.append(VectorKey(u, x, y, curve))
@@ -106,15 +119,21 @@ class EffectBuilder:
             curve = key[2] if len(key) > 2 else None
             timeline.color.append(ColorKey(u, base.with_alpha(a * self.opacity), curve))
 
+    def color(self, slot: str, u: float, color: Color, curve: Curve = None) -> None:
+        """One colour key with its own colour; its alpha is multiplied by the opacity setting."""
+        self._slot_tl(slot).color.append(ColorKey(u, color.with_alpha(color.a * self.opacity), curve))
+
     def _tint(self, which: str) -> Color:
         return {"primary": self.primary, "secondary": self.secondary, "white": Color(1, 1, 1, 1)}[which]
 
     def build(self) -> EffectDocument:
         self.doc.images = dict(self._used_images)
-        for timelines in self.doc.bone_timelines.values():
-            for keys in (timelines.translate, timelines.scale, timelines.rotate):
-                keys.sort(key=lambda k: k.u)
-        for timelines in self.doc.slot_timelines.values():
-            timelines.color.sort(key=lambda k: k.u)
-            timelines.attachment.sort(key=lambda k: k.u)
+        main = (self.doc.bone_timelines, self.doc.slot_timelines)
+        for bone_timelines, slot_timelines in (main, *self.doc.extra_animations.values()):
+            for timelines in bone_timelines.values():
+                for keys in (timelines.translate, timelines.scale, timelines.rotate):
+                    keys.sort(key=lambda k: k.u)
+            for timelines in slot_timelines.values():
+                timelines.color.sort(key=lambda k: k.u)
+                timelines.attachment.sort(key=lambda k: k.u)
         return self.doc
