@@ -365,6 +365,18 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
             paths.append(rel)
         return paths
 
+    def missing_images(self) -> list[str]:
+        """Attachment images (in every skin) that aren't in the images folder, by path."""
+        missing = set()
+        for skin in self.data["skins"]:
+            for atts in skin.get("attachments", {}).values():
+                for name, att in atts.items():
+                    if att.get("type", "region") in ("region", "mesh", "linkedmesh") and not att.get("sequence"):
+                        path = att.get("path") or name
+                        if self.image_file(path) is None:
+                            missing.add(path)
+        return sorted(missing)
+
     def image_file(self, path: str) -> Path | None:
         if not self.images_dir:
             return None
@@ -1730,6 +1742,13 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         if images is None:
             warnings.append("Images folder not found; set it with File > Set Images Folder.")
         doc = cls(data, images)  # 3.8 data is converted to the 4.0 layout here
+        doc.edit_skin = doc.starting_skin()
+        if doc.edit_skin != "default":
+            warnings.append(f"Showing the skin '{doc.edit_skin}': the default skin has no images.")
+        missing = doc.missing_images()
+        if images is not None and missing:
+            more = f" and {len(missing) - 5} more" if len(missing) > 5 else ""
+            warnings.append(f"{len(missing)} image(s) not found in {images.name}: {', '.join(missing[:5])}{more}.")
         return doc, warnings
 
     def save(self, path: Path | None = None) -> None:
@@ -1803,4 +1822,5 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
                 if name != active:
                     doc.other_skeletons[name] = (cls(data).data, [], [])
             doc._skeleton_order = list(skeletons)
+        doc.edit_skin = doc.starting_skin()
         return doc

@@ -216,3 +216,48 @@ def test_animations_follow_their_skin(qapp=None):
     assert len(win.timeline.listed_animations()) == 6
     d.dirty = False
     win.close()
+
+
+def test_an_animation_named_like_a_skin_shows_it():
+    d = Document()
+    d.data["skins"] += [{"name": "Idle", "attachments": {}}, {"name": "UI/Idle", "attachments": {}},
+                        {"name": "Emotes/Emote01", "attachments": {}}]
+    for name in ("Idle", "Emote01", "Idler"):
+        d.add_animation(name)
+    assert d.animation_skin("Idle") == "Idle", "exact name; on a tie the skin listed first"
+    assert d.animation_skin("Emote01") == "Emotes/Emote01"
+    assert d.animation_skin("Idler") is None
+
+
+def _art_in_skins_only(tmp_path) -> Path:
+    """A Spine JSON export whose default skin holds only a clipping mask, the art being in skins."""
+    images = tmp_path / "images"
+    images.mkdir()
+    from PIL import Image
+    Image.new("RGBA", (8, 8), (255, 0, 0, 255)).save(images / "body.png")
+    data = {"skeleton": {"spine": "3.8.75", "images": "./images/"},
+            "bones": [{"name": "root"}],
+            "slots": [{"name": "clip", "bone": "root", "attachment": "clip"},
+                      {"name": "body", "bone": "root", "attachment": "body"}],
+            "skins": [{"name": "default", "attachments": {"clip": {"clip": {
+                          "type": "clipping", "end": "body", "vertexCount": 3, "vertices": [0, 0, 10, 0, 0, 10]}}}},
+                      {"name": "Outfit", "attachments": {"body": {"body": {"width": 8, "height": 8}}}},
+                      {"name": "Other", "attachments": {"body": {"body": {"path": "gone", "width": 8, "height": 8}}}}],
+            "animations": {"Idle": {}}}
+    path = tmp_path / "skel.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return path
+
+
+def test_a_project_with_its_art_in_skins_opens_on_a_skin(tmp_path):
+    doc, notes = Document.import_spine_json(_art_in_skins_only(tmp_path))
+    assert doc.edit_skin == "Outfit", "the skin with the most images, not the empty default"
+    assert any("Showing the skin 'Outfit'" in n for n in notes)
+    assert doc.missing_images() == ["gone"]
+    assert any("1 image(s) not found" in n and "gone" in n for n in notes)
+    doc.data["animations"] = {"Other": {}}
+    assert doc.starting_skin() == "Other", "the first animation's own skin comes first"
+
+
+def test_a_project_with_art_in_the_default_skin_stays_on_it(doc):
+    assert doc.starting_skin() == "default"

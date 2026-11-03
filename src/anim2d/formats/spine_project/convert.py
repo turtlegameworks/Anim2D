@@ -182,7 +182,10 @@ def convert(project, version):
             return e
         v, n = verts(a, slot)
         if cls == "ClippingAttachment":
-            e.update(type="clipping", end=nm(a.get(0xc)), vertexCount=n, vertices=v)
+            end = T(a.get(0xc))
+            # No end slot (the project points it at the clipping's own slot): clip to the end of the draw order.
+            e.update(type="clipping", **({"end": nm(end)} if end and end is not slot else {}),
+                     vertexCount=n, vertices=v)
         elif cls == "BoundingBoxAttachment":
             e.update(type="boundingbox", vertexCount=n, vertices=v)
         elif cls == "PathAttachment":
