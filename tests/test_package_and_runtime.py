@@ -59,6 +59,11 @@ def test_saved_variant_reproduces_package(tmp_path, library, make_settings):
     assert a == b
 
 
+def test_cli_names_the_instance_when_no_name_is_given(tmp_path):
+    assert cli_main(["generate", "impact_basic", "--out", str(tmp_path)]) == 0
+    assert (tmp_path / "fx_impact_basic_01" / "fx_impact_basic_01.json").exists()
+
+
 def test_cli_rejects_invalid_values(tmp_path, capsys):
     code = cli_main(["generate", "impact_basic", "--name", "fx_x_01", "--out", str(tmp_path),
                      "--set", "ray_count=99"])

@@ -23,8 +23,8 @@ A particle emitter for the FX Builder, and a new logo.
 
 ### Changed
 
-* **New logo.** The app icon is the bone "i" from the new Anim2D wordmark; the wordmark is on the About page, the
-  website and the README.
+* **New logo.** The app icon is an "A" drawn as a rig (a joint dot, two bone legs ending in ring joints); the
+  new Anim2D wordmark is on the About page, the website and the README.
 * **File → Open** opens Spine `.spine` projects and `.json` exports directly.
 
 ### Fixed
@@ -33,6 +33,8 @@ A particle emitter for the FX Builder, and a new logo.
   showing bare bones. The editor now opens on the first animation's skin, and an animation named exactly like a
   skin uses that skin. Images missing from the images folder are listed on import.
 * Clipping masks in `.spine` projects with no end slot clipped nothing; they now clip to the end of the draw order.
+* `anim2d-fx generate` without `--name` failed with an instance-name error; it now names the instance
+  `fx_<preset>_01`.
 
 ## 0.18.1 (2026-10-30)
 
