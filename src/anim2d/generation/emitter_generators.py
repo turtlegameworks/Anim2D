@@ -116,8 +116,7 @@ def _particles(s, duration: float, cycling: bool, rng: random.Random) -> list[Pa
     for i in range(count):
         born = window * (i + rng.random()) / count
         life = life_base * (1 + rng.uniform(-life_var, life_var))
-        # a cycling particle dies before its next birth, or its tail's hide key lands on its own show key
-        life = min(life, duration - STEP) if cycling else min(life, duration - born)
+        life = min(life, duration) if cycling else min(life, duration - born)
         direction = angle + rng.uniform(-spread / 2, spread / 2)
         v = speed * (1 + rng.uniform(-speed_var, speed_var))
         if shape == "path":
@@ -145,7 +144,10 @@ def _segments(p: Particle, phase: str, duration: float) -> list[tuple[float, flo
     time its life starts at. A loop shows the part inside the cycle and the tail carried over from the cycle
     before; an intro starts cold; an outro only finishes those tails, with nothing new emitted."""
     inside = (0.0, min(p.life, duration - p.born), p.born)
-    tail = (duration - p.born, p.life, p.born - duration) if p.born + p.life > duration + 1e-9 else None
+    # The tail ends a step before the particle is born again: a particle living a whole cycle would otherwise
+    # hide at the very key time it shows again, and Spine, taking the last key, would hide it all cycle.
+    tail = (duration - p.born, min(p.life, duration - STEP), p.born - duration) \
+        if p.born + p.life > duration + 1e-9 else None
     if phase in ("one_shot", "intro"):
         return [inside]
     if phase == "loop":

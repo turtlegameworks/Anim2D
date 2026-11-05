@@ -83,11 +83,24 @@ def new_skeleton(fps: float = 30) -> dict[str, Any]:
 
 
 def _is_skin(skin: Any) -> bool:
-    """A skin object whose attachments map each slot to an object of attachment objects."""
-    atts = skin.get("attachments", {}) if isinstance(skin, dict) else None
-    return isinstance(atts, dict) and all(isinstance(entries, dict) and
-                                          all(isinstance(a, dict) for a in entries.values())
+    """A named skin object whose attachments map each slot to an object of attachment objects, any name or
+    image path in them being text."""
+    if not isinstance(skin, dict) or not isinstance(skin.get("name"), str):
+        return False
+    atts = skin.get("attachments", {})
+    return isinstance(atts, dict) and all(isinstance(entries, dict) and all(_is_attachment(a) for a in entries.values())
                                           for entries in atts.values())
+
+
+def _is_attachment(att: Any) -> bool:
+    return isinstance(att, dict) and all(isinstance(att.get(key, ""), str) for key in ("name", "path"))
+
+
+def _is_animation(anim: Any) -> bool:
+    """An animation object whose event keys, if any, are objects with a numeric time."""
+    events = anim.get("events", []) if isinstance(anim, dict) else None
+    return isinstance(events, list) and all(
+        isinstance(k, dict) and isinstance(k.get("time", 0), (int, float)) for k in events)
 
 
 def _r(value: float) -> float:
@@ -127,7 +140,7 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         d.setdefault("slots", [])
         skins = d.setdefault("skins", [])
         if not isinstance(skins, list) or not all(_is_skin(s) for s in skins):
-            raise EditorError("The skeleton is damaged: a skin or attachment in it is not an object")
+            raise EditorError("The skeleton is damaged: a skin or attachment in it is malformed")
         # The default skin always exists and comes first (Spine files may have only named skins).
         default = next((s for s in skins if s.get("name") == "default"), None)
         if default is None:
@@ -138,6 +151,8 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         skins[0].setdefault("attachments", {})
         d.setdefault("events", {})
         d.setdefault("animations", {})
+        if not isinstance(d["animations"], dict) or not all(_is_animation(a) for a in d["animations"].values()):
+            raise EditorError("The skeleton is damaged: an animation or event key in it is malformed")
         d["skeleton"].pop("hash", None)
         for anim in d["animations"].values():
             if "draworder" in anim:

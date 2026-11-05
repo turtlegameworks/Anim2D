@@ -293,3 +293,19 @@ def test_a_project_with_a_null_attachment_is_reported_as_damaged(tmp_path):
     path.write_text(json.dumps(project), encoding="utf-8")
     with pytest.raises(EditorError, match="broken.anim2d.*damaged"):
         Document.load(path)
+
+
+@pytest.mark.parametrize("damage", [
+    lambda p: p["skeleton"]["skins"].append({}),  # a skin without a name
+    lambda p: p["skeleton"]["skins"][0]["attachments"].update({"head": {"face": {"name": None}}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [None]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": "soon"}]}}),
+], ids=["unnamed-skin", "null-name", "null-event", "text-time"])
+def test_damaged_skins_and_events_are_reported_on_open(tmp_path, damage):
+    path = tmp_path / "broken.anim2d"
+    Document().save(path)
+    project = json.loads(path.read_text(encoding="utf-8"))
+    damage(project)
+    path.write_text(json.dumps(project), encoding="utf-8")
+    with pytest.raises(EditorError, match="broken.anim2d.*damaged"):
+        Document.load(path)

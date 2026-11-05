@@ -123,3 +123,7 @@ def test_a_particle_living_a_whole_cycle_stays_visible_in_a_loop(library, make_s
     for timelines in doc.slot_timelines.values():
         times = [round(k.u, 6) for k in timelines.attachment]
         assert len(times) == len(set(times)), times
+    for seed in range(40):  # and the loop still lasts its whole duration, even with one short-lived cycle
+        doc = generate_effect(library.get("dust_motes"), make_settings(
+            "dust_motes", phase="loop", count=1, duration=0.1, lifetime=5.0, lifetime_variance=0, seed=seed))
+        assert max(k.u for t in doc.slot_timelines.values() for k in t.attachment) == 1.0, seed
