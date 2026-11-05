@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import random
 
+import pytest
+
 from anim2d.generation.emitter_generators import simulate
 from anim2d.generation.registry import generate_effect
 
@@ -123,7 +125,21 @@ def test_a_particle_living_a_whole_cycle_stays_visible_in_a_loop(library, make_s
     for timelines in doc.slot_timelines.values():
         times = [round(k.u, 6) for k in timelines.attachment]
         assert len(times) == len(set(times)), times
-    for seed in range(40):  # and the loop still lasts its whole duration, even with one short-lived cycle
-        doc = generate_effect(library.get("dust_motes"), make_settings(
-            "dust_motes", phase="loop", count=1, duration=0.1, lifetime=5.0, lifetime_variance=0, seed=seed))
-        assert max(k.u for t in doc.slot_timelines.values() for k in t.attachment) == 1.0, seed
+
+
+@pytest.mark.parametrize("phase", ["loop", "outro", "animation_set"])
+def test_every_phase_lasts_its_whole_duration(library, make_settings, phase):
+    # Even when no particle is alive at the end (one short-lived particle, or an outro whose tails all ended),
+    # each exported animation must end at the duration, or packaging rejects it.
+    from anim2d.spine_adapters import spine38
+    from anim2d.validation.spine38_validator import validate_output
+    values = {"animation_set": True} if phase == "animation_set" else {"phase": phase}
+    for seed in range(20):
+        for duration, lifetime in ((0.1, 5.0), (1.0, 0.2)):
+            doc = generate_effect(library.get("dust_motes"), make_settings(
+                "dust_motes", count=1, duration=duration, lifetime=lifetime, lifetime_variance=0, seed=seed, **values))
+            data = spine38.serialize(doc)
+            for name, animation in data["animations"].items():
+                report = validate_output({**data, "animations": {name: animation}}, None, "fx_test_01",
+                                         end_time=duration, strict_one_shot=False)
+                assert not [e for e in report.errors if "should end" in e], (name, seed, duration, report.errors)

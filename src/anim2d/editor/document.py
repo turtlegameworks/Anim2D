@@ -97,10 +97,18 @@ def _is_attachment(att: Any) -> bool:
 
 
 def _is_animation(anim: Any) -> bool:
-    """An animation object whose event keys, if any, are objects with a numeric time."""
+    """An animation object whose event keys, if any, are objects naming an event at a numeric time."""
     events = anim.get("events", []) if isinstance(anim, dict) else None
     return isinstance(events, list) and all(
-        isinstance(k, dict) and isinstance(k.get("time", 0), (int, float)) for k in events)
+        isinstance(k, dict) and isinstance(k.get("name"), str) and
+        isinstance(k.get("time", 0), (int, float)) and not isinstance(k.get("time", 0), bool) for k in events)
+
+
+def check_animations(data: dict[str, Any]) -> None:
+    """Raise EditorError for animations or event keys that aren't what Spine writes, before anything reads them."""
+    animations = data.get("animations", {})
+    if not isinstance(animations, dict) or not all(_is_animation(a) for a in animations.values()):
+        raise EditorError("The skeleton is damaged: an animation or event key in it is malformed")
 
 
 def _r(value: float) -> float:
@@ -132,6 +140,7 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
     # --- infrastructure -------------------------------------------------------------------
 
     def _normalize(self) -> None:
+        check_animations(self.data)  # before the 3.8 upgrade, which reads them
         if not spine40.is_40(self.data):  # 3.8 data (imports, version 1 projects) -> 4.0 layout
             self.data = spine40.upgrade(self.data)
         d = self.data
@@ -151,8 +160,6 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         skins[0].setdefault("attachments", {})
         d.setdefault("events", {})
         d.setdefault("animations", {})
-        if not isinstance(d["animations"], dict) or not all(_is_animation(a) for a in d["animations"].values()):
-            raise EditorError("The skeleton is damaged: an animation or event key in it is malformed")
         d["skeleton"].pop("hash", None)
         for anim in d["animations"].values():
             if "draworder" in anim:
@@ -1760,6 +1767,10 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
                          images_dir: Path | None) -> tuple["Document", list[str]]:
         from ..templates.register import default_images_dir
         json_path = source
+        try:
+            check_animations(data)  # before normalize_layout, which reads them
+        except EditorError as exc:
+            raise EditorError(f"Cannot open {json_path.name}: {exc}") from None
         notes = ops.normalize_layout(data)
         errors, warnings = ops.check_supported(data, None, full=True)
         warnings = notes + warnings
