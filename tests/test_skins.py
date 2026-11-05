@@ -261,3 +261,35 @@ def test_a_project_with_its_art_in_skins_opens_on_a_skin(tmp_path):
 
 def test_a_project_with_art_in_the_default_skin_stays_on_it(doc):
     assert doc.starting_skin() == "default"
+
+
+def test_a_skeleton_without_a_default_skin_gets_one_first():
+    d = Document({"skeleton": {"spine": "4.0.64"}, "bones": [{"name": "root"}], "slots": [],
+                  "skins": [{"name": "Outfit", "attachments": {}}, {"name": "default", "attachments": {}}]})
+    assert d.skin_names() == ["default", "Outfit"], "an existing default skin moves to the front"
+    d = Document({"skeleton": {"spine": "4.0.64"}, "bones": [{"name": "root"}], "slots": [],
+                  "skins": [{"name": "Outfit", "attachments": {}}]})
+    assert d.skin_names() == ["default", "Outfit"]
+    assert d.starting_skin() in d.skin_names()
+
+
+def test_a_named_attachment_without_a_path_uses_its_name_for_the_image(tmp_path):
+    images = tmp_path / "images"
+    images.mkdir()
+    from PIL import Image
+    Image.new("RGBA", (8, 8)).save(images / "body.png")
+    d = Document(images_dir=images)
+    d.add_slot("root", "torso")
+    d.skin["torso"] = {"pose_a": {"name": "body", "width": 8, "height": 8},
+                       "pose_b": {"name": "gone", "width": 8, "height": 8}}
+    assert d.missing_images() == ["gone"], "Spine's rule: path, else the attachment's name, else its key"
+
+
+def test_a_project_with_a_null_attachment_is_reported_as_damaged(tmp_path):
+    path = tmp_path / "broken.anim2d"
+    Document().save(path)
+    project = json.loads(path.read_text(encoding="utf-8"))
+    project["skeleton"]["skins"][0]["attachments"] = {"head": {"face": None}}
+    path.write_text(json.dumps(project), encoding="utf-8")
+    with pytest.raises(EditorError, match="broken.anim2d.*damaged"):
+        Document.load(path)

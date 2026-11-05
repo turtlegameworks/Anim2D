@@ -116,7 +116,8 @@ def _particles(s, duration: float, cycling: bool, rng: random.Random) -> list[Pa
     for i in range(count):
         born = window * (i + rng.random()) / count
         life = life_base * (1 + rng.uniform(-life_var, life_var))
-        life = min(life, duration) if cycling else min(life, duration - born)
+        # a cycling particle dies before its next birth, or its tail's hide key lands on its own show key
+        life = min(life, duration - STEP) if cycling else min(life, duration - born)
         direction = angle + rng.uniform(-spread / 2, spread / 2)
         v = speed * (1 + rng.uniform(-speed_var, speed_var))
         if shape == "path":

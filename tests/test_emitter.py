@@ -113,3 +113,13 @@ def test_the_path_emitter_walks_along_the_curve(library, make_settings):
     xs = [k.x for k in sorted(firsts, key=lambda k: k.u)]
     assert xs == sorted(xs) and xs[0] < 60 and xs[-1] > 540  # from the start of the path to its end
     assert max(k.y for k in firsts) > 80  # bent up towards the bend point (half way, on this curve)
+
+
+def test_a_particle_living_a_whole_cycle_stays_visible_in_a_loop(library, make_settings):
+    # Lifetime longer than the cycle: each particle's tail from the last cycle must end before it is born
+    # again, or its hide key lands on its own show key and Spine (last key wins) hides it all cycle.
+    doc = generate_effect(library.get("dust_motes"),
+                          make_settings("dust_motes", phase="loop", duration=1.0, lifetime=3.0, lifetime_variance=0))
+    for timelines in doc.slot_timelines.values():
+        times = [round(k.u, 6) for k in timelines.attachment]
+        assert len(times) == len(set(times)), times

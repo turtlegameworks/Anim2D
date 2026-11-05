@@ -82,6 +82,14 @@ def new_skeleton(fps: float = 30) -> dict[str, Any]:
     }
 
 
+def _is_skin(skin: Any) -> bool:
+    """A skin object whose attachments map each slot to an object of attachment objects."""
+    atts = skin.get("attachments", {}) if isinstance(skin, dict) else None
+    return isinstance(atts, dict) and all(isinstance(entries, dict) and
+                                          all(isinstance(a, dict) for a in entries.values())
+                                          for entries in atts.values())
+
+
 def _r(value: float) -> float:
     v = round(float(value), 4)
     return 0.0 if v == 0 else v
@@ -118,8 +126,15 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         d.setdefault("bones", [{"name": "root"}])
         d.setdefault("slots", [])
         skins = d.setdefault("skins", [])
-        if not skins:
-            skins.append({"name": "default", "attachments": {}})
+        if not isinstance(skins, list) or not all(_is_skin(s) for s in skins):
+            raise EditorError("The skeleton is damaged: a skin or attachment in it is not an object")
+        # The default skin always exists and comes first (Spine files may have only named skins).
+        default = next((s for s in skins if s.get("name") == "default"), None)
+        if default is None:
+            skins.insert(0, {"name": "default", "attachments": {}})
+        elif skins[0] is not default:
+            skins.remove(default)
+            skins.insert(0, default)
         skins[0].setdefault("attachments", {})
         d.setdefault("events", {})
         d.setdefault("animations", {})
@@ -372,7 +387,7 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
             for atts in skin.get("attachments", {}).values():
                 for name, att in atts.items():
                     if att.get("type", "region") in ("region", "mesh", "linkedmesh") and not att.get("sequence"):
-                        path = att.get("path") or name
+                        path = ops.image_path_of(name, att)
                         if self.image_file(path) is None:
                             missing.add(path)
         return sorted(missing)
@@ -1811,16 +1826,19 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         images = project.get("images_dir")
         images_dir = (path.parent / images).resolve() if images and not Path(images).is_absolute() else \
             (Path(images) if images else None)
-        doc = cls(project["skeleton"], images_dir, path)
-        if isinstance(project.get("settings"), dict):
-            doc.project_settings = project["settings"]
-        skeletons = project.get("skeletons")
-        if isinstance(skeletons, dict) and skeletons:
-            active = project.get("active") if project.get("active") in skeletons else next(iter(skeletons))
-            doc.skeleton_name = active
-            for name, data in skeletons.items():
-                if name != active:
-                    doc.other_skeletons[name] = (cls(data).data, [], [])
-            doc._skeleton_order = list(skeletons)
+        try:
+            doc = cls(project["skeleton"], images_dir, path)
+            if isinstance(project.get("settings"), dict):
+                doc.project_settings = project["settings"]
+            skeletons = project.get("skeletons")
+            if isinstance(skeletons, dict) and skeletons:
+                active = project.get("active") if project.get("active") in skeletons else next(iter(skeletons))
+                doc.skeleton_name = active
+                for name, data in skeletons.items():
+                    if name != active:
+                        doc.other_skeletons[name] = (cls(data).data, [], [])
+                doc._skeleton_order = list(skeletons)
+        except EditorError as exc:
+            raise EditorError(f"Cannot open {path.name}: {exc}") from None
         doc.edit_skin = doc.starting_skin()
         return doc

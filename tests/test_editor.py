@@ -441,3 +441,15 @@ def test_insert_an_animation_set(tmp_path, library):
     assert {"ambient_intro", "ambient_loop", "ambient_outro"} <= set(doc.animation_names())
     assert any("animation set" in w for w in result.warnings)
     assert doc.validate()[0] == []
+
+
+def test_insert_fx_dialog_says_when_the_event_never_fires(qapp, rig, library):
+    from anim2d.editor.fx_dialog import InsertFxDialog
+    rig.add_event("hit")  # declared, but no key in 'wave' fires it
+    dialog = InsertFxDialog(rig, library, "arm", "wave", 0.0)
+    dialog.select_preset("impact_basic")
+    dialog.event_combo.setCurrentIndex(dialog.event_combo.findData("hit"))
+    texts = [dialog.messages.item(i).text() for i in range(dialog.messages.count())]
+    assert not dialog.insert_button.isEnabled()
+    assert any("doesn't fire in 'wave'" in t for t in texts), texts
+    rig.dirty = False

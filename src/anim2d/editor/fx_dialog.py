@@ -167,6 +167,12 @@ class InsertFxDialog(QDialog):
             errors.append("The project has no images folder yet (File > Set Images Folder).")
         if not self.animation_combo.currentText().strip():
             errors.append("Choose or type an animation name.")
+        event = self.event_combo.currentData()
+        animation = self.animation_combo.currentText().strip()
+        self.start_spin.setEnabled(event is None)
+        times = event_times(self.doc, animation, event) if event else []
+        if event and not times:
+            errors.insert(0, f"The event '{event}' doesn't fire in '{animation}'.")
         self.preview.set_evaluator(evaluator, keep_framing=not reframe,
                                    message="" if evaluator else "Fix the settings to see the effect")
         self.messages.clear()
@@ -178,12 +184,6 @@ class InsertFxDialog(QDialog):
             item = QListWidgetItem(f"⚠ {text}")
             item.setForeground(QColor("#f0b44c"))
             self.messages.addItem(item)
-        event = self.event_combo.currentData()
-        animation = self.animation_combo.currentText().strip()
-        self.start_spin.setEnabled(event is None)
-        times = event_times(self.doc, animation, event) if event else []
-        if event and not times:
-            errors.insert(0, f"The event '{event}' doesn't fire in '{animation}'.")
         if not errors:
             if event:
                 self.messages.addItem(f"✔ Plays on each '{event}' in '{animation}' ({len(times)} time(s), from "
