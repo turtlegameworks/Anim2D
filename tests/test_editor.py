@@ -462,3 +462,6 @@ def test_insert_fx_refuses_an_event_before_the_start(tmp_path, library):
     settings, _ = validate_settings(library.get("impact_basic"), "fx_hit_01", {})
     with pytest.raises(EditorError, match="before the start"):
         insert_fx(doc, library.get("impact_basic"), settings, "root", "attack", 0, trigger_event="hit")
+    doc.data["animations"]["attack"] = {"events": [{"time": -0.000001, "name": "hit"}]}  # rounds to -0.0
+    with pytest.raises(EditorError, match="before the start"):
+        insert_fx(doc, library.get("impact_basic"), settings, "root", "attack", 0, trigger_event="hit")

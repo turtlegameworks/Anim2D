@@ -80,7 +80,8 @@ def insert_fx(doc: Document, preset: PresetDefinition, settings: EffectSettings,
         starts = event_times(doc, animation, trigger_event)
         if not starts:
             raise EditorError(f"The event '{trigger_event}' doesn't fire in the animation '{animation}'.")
-        if starts[0] < 0:  # sorted, so the earliest; an event edited to a negative time
+        if any(k.get("time", 0) < 0 for k in doc.data["animations"].get(animation, {}).get("events", [])
+               if k.get("name") == trigger_event):  # an event edited to a negative time; checked before rounding
             raise EditorError(f"The event '{trigger_event}' fires before the start of '{animation}'.")
     try:
         fx_doc, fx = build_document(preset, settings)
