@@ -453,3 +453,12 @@ def test_insert_fx_dialog_says_when_the_event_never_fires(qapp, rig, library):
     assert not dialog.insert_button.isEnabled()
     assert any("doesn't fire in 'wave'" in t for t in texts), texts
     rig.dirty = False
+
+
+def test_insert_fx_refuses_an_event_before_the_start(tmp_path, library):
+    doc = Document(images_dir=tmp_path / "images")
+    doc.add_event("hit")
+    doc.data["animations"]["attack"] = {"events": [{"time": -0.2, "name": "hit"}]}  # edited in memory, not loaded
+    settings, _ = validate_settings(library.get("impact_basic"), "fx_hit_01", {})
+    with pytest.raises(EditorError, match="before the start"):
+        insert_fx(doc, library.get("impact_basic"), settings, "root", "attack", 0, trigger_event="hit")

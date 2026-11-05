@@ -98,11 +98,11 @@ def _is_attachment(att: Any) -> bool:
 
 
 def _is_time(value: Any) -> bool:
-    """A finite number of seconds (JSON true is not 1, and 1e309 is not a time)."""
+    """A finite number of seconds from the start (JSON true is not 1, and -1 or 1e309 is not a time)."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
     try:
-        return math.isfinite(float(value))
+        return math.isfinite(float(value)) and value >= 0
     except OverflowError:
         return False
 
@@ -1792,7 +1792,10 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         images = Path(images_dir) if images_dir else default_images_dir(json_path, data)
         if images is None:
             warnings.append("Images folder not found; set it with File > Set Images Folder.")
-        doc = cls(data, images)  # 3.8 data is converted to the 4.0 layout here
+        try:
+            doc = cls(data, images)  # 3.8 data is converted to the 4.0 layout here
+        except EditorError as exc:
+            raise EditorError(f"Cannot open {json_path.name}: {exc}") from None
         doc.edit_skin = doc.starting_skin()
         if doc.edit_skin != "default":
             warnings.append(f"Showing the skin '{doc.edit_skin}': the default skin has no images.")
