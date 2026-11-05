@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 import re
 import shutil
@@ -82,6 +83,44 @@ def new_skeleton(fps: float = 30) -> dict[str, Any]:
     }
 
 
+def _is_skin(skin: Any) -> bool:
+    """A named skin object whose attachments map each slot to an object of attachment objects, any name or
+    image path in them being text."""
+    if not isinstance(skin, dict) or not isinstance(skin.get("name"), str):
+        return False
+    atts = skin.get("attachments", {})
+    return isinstance(atts, dict) and all(isinstance(entries, dict) and all(_is_attachment(a) for a in entries.values())
+                                          for entries in atts.values())
+
+
+def _is_attachment(att: Any) -> bool:
+    return isinstance(att, dict) and all(isinstance(att.get(key, ""), str) for key in ("name", "path"))
+
+
+def _is_time(value: Any) -> bool:
+    """A finite number of seconds from the start (JSON true is not 1, and -1 or 1e309 is not a time)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value)) and value >= 0
+    except OverflowError:
+        return False
+
+
+def _is_animation(anim: Any) -> bool:
+    """An animation object whose event keys, if any, are objects naming an event at a finite time."""
+    events = anim.get("events", []) if isinstance(anim, dict) else None
+    return isinstance(events, list) and all(
+        isinstance(k, dict) and isinstance(k.get("name"), str) and _is_time(k.get("time", 0)) for k in events)
+
+
+def check_animations(data: dict[str, Any]) -> None:
+    """Raise EditorError for animations or event keys that aren't what Spine writes, before anything reads them."""
+    animations = data.get("animations", {})
+    if not isinstance(animations, dict) or not all(_is_animation(a) for a in animations.values()):
+        raise EditorError("The skeleton is damaged: an animation or event key in it is malformed")
+
+
 def _r(value: float) -> float:
     v = round(float(value), 4)
     return 0.0 if v == 0 else v
@@ -111,6 +150,7 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
     # --- infrastructure -------------------------------------------------------------------
 
     def _normalize(self) -> None:
+        check_animations(self.data)  # before the 3.8 upgrade, which reads them
         if not spine40.is_40(self.data):  # 3.8 data (imports, version 1 projects) -> 4.0 layout
             self.data = spine40.upgrade(self.data)
         d = self.data
@@ -118,8 +158,15 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         d.setdefault("bones", [{"name": "root"}])
         d.setdefault("slots", [])
         skins = d.setdefault("skins", [])
-        if not skins:
-            skins.append({"name": "default", "attachments": {}})
+        if not isinstance(skins, list) or not all(_is_skin(s) for s in skins):
+            raise EditorError("The skeleton is damaged: a skin or attachment in it is malformed")
+        # The default skin always exists and comes first (Spine files may have only named skins).
+        default = next((s for s in skins if s.get("name") == "default"), None)
+        if default is None:
+            skins.insert(0, {"name": "default", "attachments": {}})
+        elif skins[0] is not default:
+            skins.remove(default)
+            skins.insert(0, default)
         skins[0].setdefault("attachments", {})
         d.setdefault("events", {})
         d.setdefault("animations", {})
@@ -364,6 +411,18 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
             rel = file.relative_to(self.images_dir).with_suffix("").as_posix()
             paths.append(rel)
         return paths
+
+    def missing_images(self) -> list[str]:
+        """Attachment images (in every skin) that aren't in the images folder, by path."""
+        missing = set()
+        for skin in self.data["skins"]:
+            for atts in skin.get("attachments", {}).values():
+                for name, att in atts.items():
+                    if att.get("type", "region") in ("region", "mesh", "linkedmesh") and not att.get("sequence"):
+                        path = ops.image_path_of(name, att)
+                        if self.image_file(path) is None:
+                            missing.add(path)
+        return sorted(missing)
 
     def image_file(self, path: str) -> Path | None:
         if not self.images_dir:
@@ -1718,6 +1777,10 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
                          images_dir: Path | None) -> tuple["Document", list[str]]:
         from ..templates.register import default_images_dir
         json_path = source
+        try:
+            check_animations(data)  # before normalize_layout, which reads them
+        except EditorError as exc:
+            raise EditorError(f"Cannot open {json_path.name}: {exc}") from None
         notes = ops.normalize_layout(data)
         errors, warnings = ops.check_supported(data, None, full=True)
         warnings = notes + warnings
@@ -1729,7 +1792,17 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         images = Path(images_dir) if images_dir else default_images_dir(json_path, data)
         if images is None:
             warnings.append("Images folder not found; set it with File > Set Images Folder.")
-        doc = cls(data, images)  # 3.8 data is converted to the 4.0 layout here
+        try:
+            doc = cls(data, images)  # 3.8 data is converted to the 4.0 layout here
+        except EditorError as exc:
+            raise EditorError(f"Cannot open {json_path.name}: {exc}") from None
+        doc.edit_skin = doc.starting_skin()
+        if doc.edit_skin != "default":
+            warnings.append(f"Showing the skin '{doc.edit_skin}': the default skin has no images.")
+        missing = doc.missing_images()
+        if images is not None and missing:
+            more = f" and {len(missing) - 5} more" if len(missing) > 5 else ""
+            warnings.append(f"{len(missing)} image(s) not found in {images.name}: {', '.join(missing[:5])}{more}.")
         return doc, warnings
 
     def save(self, path: Path | None = None) -> None:
@@ -1792,15 +1865,19 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         images = project.get("images_dir")
         images_dir = (path.parent / images).resolve() if images and not Path(images).is_absolute() else \
             (Path(images) if images else None)
-        doc = cls(project["skeleton"], images_dir, path)
-        if isinstance(project.get("settings"), dict):
-            doc.project_settings = project["settings"]
-        skeletons = project.get("skeletons")
-        if isinstance(skeletons, dict) and skeletons:
-            active = project.get("active") if project.get("active") in skeletons else next(iter(skeletons))
-            doc.skeleton_name = active
-            for name, data in skeletons.items():
-                if name != active:
-                    doc.other_skeletons[name] = (cls(data).data, [], [])
-            doc._skeleton_order = list(skeletons)
+        try:
+            doc = cls(project["skeleton"], images_dir, path)
+            if isinstance(project.get("settings"), dict):
+                doc.project_settings = project["settings"]
+            skeletons = project.get("skeletons")
+            if isinstance(skeletons, dict) and skeletons:
+                active = project.get("active") if project.get("active") in skeletons else next(iter(skeletons))
+                doc.skeleton_name = active
+                for name, data in skeletons.items():
+                    if name != active:
+                        doc.other_skeletons[name] = (cls(data).data, [], [])
+                doc._skeleton_order = list(skeletons)
+        except EditorError as exc:
+            raise EditorError(f"Cannot open {path.name}: {exc}") from None
+        doc.edit_skin = doc.starting_skin()
         return doc

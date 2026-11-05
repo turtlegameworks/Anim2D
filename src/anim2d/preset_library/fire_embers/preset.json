@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "id": "fire_embers",
+  "version": 1,
+  "name": "Fire Embers",
+  "category": "magic",
+  "description": "Glowing embers rise, flicker on the heat and fade from yellow to red.",
+  "tags": [
+    "fire",
+    "embers",
+    "sparks",
+    "heat",
+    "particles"
+  ],
+  "generator": "particle_emitter",
+  "generator_version": 1,
+  "source_duration_seconds": 2.0,
+  "supports_loop": false,
+  "required_features": [
+    "bones",
+    "regions",
+    "slot_color",
+    "attachment_keys"
+  ],
+  "preview": null,
+  "images": {
+    "particle": "images/particle.png"
+  },
+  "common_overrides": {
+    "duration": {
+      "default": 2.0,
+      "min": 0.1,
+      "max": 10.0
+    },
+    "primary_color": {
+      "default": "ffd34aff"
+    },
+    "secondary_color": {
+      "default": "ff3b1fff"
+    }
+  },
+  "parameters": {
+    "count": {
+      "type": "integer",
+      "default": 60,
+      "label": "Particles",
+      "min": 1,
+      "max": 200
+    },
+    "emit_time": {
+      "type": "number",
+      "default": 0.8,
+      "label": "Emit for",
+      "min": 0,
+      "max": 1,
+      "description": "Part of the duration particles are emitted over; 0 = all at once"
+    },
+    "lifetime": {
+      "type": "number",
+      "default": 1.2,
+      "label": "Lifetime",
+      "min": 0.05,
+      "max": 10,
+      "unit": "s"
+    },
+    "lifetime_variance": {
+      "type": "number",
+      "default": 0.3,
+      "label": "Lifetime variance",
+      "min": 0,
+      "max": 1
+    },
+    "speed": {
+      "type": "number",
+      "default": 160,
+      "label": "Speed",
+      "min": 0,
+      "max": 3000,
+      "unit": "px/s"
+    },
+    "speed_variance": {
+      "type": "number",
+      "default": 0.3,
+      "label": "Speed variance",
+      "min": 0,
+      "max": 1
+    },
+    "angle": {
+      "type": "number",
+      "default": 90,
+      "label": "Direction",
+      "min": -180,
+      "max": 180,
+      "unit": "\u00b0"
+    },
+    "spread": {
+      "type": "number",
+      "default": 40,
+      "label": "Spread",
+      "min": 0,
+      "max": 360,
+      "unit": "\u00b0"
+    },
+    "phase": {
+      "type": "choice",
+      "default": "one_shot",
+      "choices": [
+        "one_shot",
+        "intro",
+        "loop",
+        "outro"
+      ],
+      "label": "Phase",
+      "description": "One-shot, or one part of a continuous effect: intro starts it, loop repeats seamlessly, outro lets it die out"
+    },
+    "animation_set": {
+      "type": "boolean",
+      "default": false,
+      "label": "Animation set",
+      "description": "Export intro, loop and outro animations together, cut from one simulation so they hand over without a jump"
+    },
+    "emitter_shape": {
+      "type": "choice",
+      "default": "line",
+      "choices": [
+        "point",
+        "line",
+        "circle",
+        "ring",
+        "path"
+      ],
+      "label": "Emitter shape"
+    },
+    "emitter_width": {
+      "type": "number",
+      "default": 120,
+      "label": "Emitter size",
+      "min": 0,
+      "max": 2000,
+      "unit": "px"
+    },
+    "path_end_x": {
+      "type": "number",
+      "default": 400,
+      "label": "Path end X",
+      "min": -3000,
+      "max": 3000,
+      "unit": "px"
+    },
+    "path_end_y": {
+      "type": "number",
+      "default": 0,
+      "label": "Path end Y",
+      "min": -3000,
+      "max": 3000,
+      "unit": "px"
+    },
+    "path_bend_x": {
+      "type": "number",
+      "default": 200,
+      "label": "Path bend X",
+      "min": -3000,
+      "max": 3000,
+      "unit": "px",
+      "description": "The point the path curves towards"
+    },
+    "path_bend_y": {
+      "type": "number",
+      "default": 150,
+      "label": "Path bend Y",
+      "min": -3000,
+      "max": 3000,
+      "unit": "px"
+    },
+    "path_mode": {
+      "type": "choice",
+      "default": "travel",
+      "choices": [
+        "travel",
+        "distribute"
+      ],
+      "label": "Path emission",
+      "description": "travel: the spawn point walks from start to end; distribute: anywhere along it"
+    },
+    "path_align": {
+      "type": "boolean",
+      "default": true,
+      "label": "Direction follows path"
+    },
+    "gravity": {
+      "type": "number",
+      "default": -220,
+      "label": "Gravity",
+      "min": -3000,
+      "max": 3000,
+      "unit": "px/s\u00b2"
+    },
+    "drag": {
+      "type": "number",
+      "default": 0.8,
+      "label": "Drag",
+      "min": 0,
+      "max": 10
+    },
+    "wind": {
+      "type": "number",
+      "default": 0,
+      "label": "Wind",
+      "min": -3000,
+      "max": 3000,
+      "unit": "px/s\u00b2"
+    },
+    "turbulence": {
+      "type": "number",
+      "default": 500,
+      "label": "Turbulence",
+      "min": 0,
+      "max": 3000,
+      "unit": "px/s\u00b2"
+    },
+    "turbulence_frequency": {
+      "type": "number",
+      "default": 1.5,
+      "label": "Turbulence speed",
+      "min": 0.05,
+      "max": 10,
+      "unit": "Hz"
+    },
+    "attract_x": {
+      "type": "number",
+      "default": 0,
+      "label": "Attractor X",
+      "min": -2000,
+      "max": 2000,
+      "unit": "px"
+    },
+    "attract_y": {
+      "type": "number",
+      "default": 0,
+      "label": "Attractor Y",
+      "min": -2000,
+      "max": 2000,
+      "unit": "px"
+    },
+    "attract_strength": {
+      "type": "number",
+      "default": 0,
+      "label": "Attractor pull",
+      "min": -5000,
+      "max": 5000,
+      "unit": "px/s\u00b2",
+      "description": "Negative pushes away"
+    },
+    "start_size": {
+      "type": "number",
+      "default": 18,
+      "label": "Start size",
+      "min": 0,
+      "max": 500,
+      "unit": "px"
+    },
+    "end_size": {
+      "type": "number",
+      "default": 4,
+      "label": "End size",
+      "min": 0,
+      "max": 500,
+      "unit": "px"
+    },
+    "spin": {
+      "type": "number",
+      "default": 0,
+      "label": "Spin",
+      "min": 0,
+      "max": 1440,
+      "unit": "\u00b0/s"
+    },
+    "face_direction": {
+      "type": "boolean",
+      "default": false,
+      "label": "Face direction"
+    },
+    "fade_in": {
+      "type": "number",
+      "default": 0.1,
+      "label": "Fade in",
+      "min": 0,
+      "max": 1
+    },
+    "fade_out": {
+      "type": "number",
+      "default": 0.4,
+      "label": "Fade out",
+      "min": 0,
+      "max": 1
+    },
+    "color_over_life": {
+      "type": "boolean",
+      "default": true,
+      "label": "Primary \u2192 secondary over life"
+    },
+    "blend": {
+      "type": "choice",
+      "default": "additive",
+      "choices": [
+        "normal",
+        "additive"
+      ],
+      "label": "Blend"
+    }
+  }
+}

@@ -120,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: {exc}", file=sys.stderr)
             return 2
         name = name or variant_name
+    name = name or f"fx_{preset.id}_01"[:48]  # --name is optional: default like the FX Builder's fx_impact_01
     raw.update(_parse_sets(args.set))
     settings, report = validate_settings(preset, name, raw)
     for warning in report.warnings:

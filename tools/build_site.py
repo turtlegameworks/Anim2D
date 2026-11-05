@@ -44,7 +44,7 @@ PAGE = """<!doctype html>
 </head>
 <body>
   <header class="top">
-    <a class="brand" href="../"><img src="../assets/icon-64.png" alt="" width="28" height="28"> Anim2D</a>
+    <a class="brand" href="../"><img src="../assets/anim2d-logo-light.png" alt="Anim2D" width="117" height="28"></a>
     <nav>
       <a href="../#features">Features</a>
       <a href="./">Docs</a>
@@ -169,6 +169,7 @@ def build(out: Path) -> Path:
     icon = draw()
     for size in (64, 256):
         icon.resize((size, size)).save(out / "assets" / f"icon-{size}.png")
+    shutil.copy2(ROOT / "src" / "anim2d" / "assets" / "anim2d-logo-light.png", out / "assets")  # tools/make_logo.py
     shutil.copytree(DOCS / "screenshots", out / "docs" / "screenshots")
     pages = sources()
     stems = set(pages)

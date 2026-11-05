@@ -34,7 +34,8 @@ class SkinsMixin:
 
     def animation_skin(self, animation: str | None) -> str | None:
         """The skin an animation belongs to, by name: 'L1_intro' -> skin 'L1' (also 'L1 intro',
-        'L1-intro', 'L1/intro'; a skin in a folder matches by its last part). None if no skin matches."""
+        'L1-intro', 'L1/intro', and 'L1' itself; a skin in a folder matches by its last part). The
+        longest match wins, and on a tie the skin listed first. None if no skin matches."""
         if not animation:
             return None
         best = None
@@ -42,9 +43,26 @@ class SkinsMixin:
             if skin == "default":
                 continue
             for prefix in {skin, skin.rsplit("/", 1)[-1]}:
-                if animation.lower().startswith(prefix.lower()) and                         animation[len(prefix):len(prefix) + 1] in ("_", " ", "-", "/", ".") and                         (best is None or len(prefix) > best[1]):
+                if animation.lower().startswith(prefix.lower()) and \
+                        animation[len(prefix):len(prefix) + 1] in ("", "_", " ", "-", "/", ".") and \
+                        (best is None or len(prefix) > best[1]):
                     best = (skin, len(prefix))
         return best[0] if best else None
+
+    def starting_skin(self) -> str:
+        """The skin to show when a project is opened. The default skin, unless it has no images (only a
+        clipping mask, say) and the art is all in other skins: then the first animation's skin, or else
+        the skin with the most attachments, so the character shows instead of bare bones."""
+        def images(skin: dict[str, Any]) -> int:
+            return sum(1 for atts in skin.get("attachments", {}).values() for a in atts.values()
+                       if a.get("type", "region") in ("region", "mesh", "linkedmesh"))
+        skins = self.data["skins"]
+        if not skins or images(skins[0]) or len(skins) == 1:
+            return "default"
+        first = self.animation_skin(next(iter(self.animation_names()), None))
+        if first:
+            return first
+        return max(skins[1:], key=images)["name"]
 
     def skin_animations(self, skin: str | None) -> list[str]:
         """Animations shown with a skin: its own and those that belong to no skin."""

@@ -650,14 +650,25 @@ class EditorWindow(QMainWindow):
     def open_project(self) -> None:
         if not self._confirm_discard():
             return
-        path, _ = QFileDialog.getOpenFileName(self, "Open project", self._start_dir(), PROJECT_FILTER)
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Open project", self._start_dir(),
+            f"Projects (*.anim2d *.rig2d *.spine *.json);;{PROJECT_FILTER};;"
+            "Spine project, 3.8.x or 4.2.x (*.spine);;Spine JSON (*.json)")
         if path:
             self.open_path(Path(path))
 
     def open_path(self, path: Path) -> None:
+        """An Anim2D project, or a Spine project or JSON export, which is imported as a new project."""
         self._remember_dir(path)
-        self.set_document(Document.load(path))
-        self.add_recent(path)
+        suffix = path.suffix.lower()
+        if suffix in (".spine", ".json"):
+            doc, warnings = (Document.import_spine_project(path) if suffix == ".spine"
+                             else Document.import_spine_json(path))
+            self.set_document(doc)
+            self.status_label.setText(f"Imported {path.name}" + (f" · {' '.join(warnings)}" if warnings else ""))
+        else:  # imports stay out of Recent Projects
+            self.set_document(Document.load(path))
+            self.add_recent(path)
 
     # Recent projects (File > Recent Projects), newest first.
     def recent_projects(self) -> list[str]:

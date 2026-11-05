@@ -44,8 +44,6 @@ def _curve(out: dict[str, Any], curve: Curve) -> None:
 
 
 def serialize(doc: EffectDocument) -> dict[str, Any]:
-    t = doc.timing.seconds
-
     bones = []
     for bone in doc.bones:
         entry: dict[str, Any] = {"name": bone.name}
@@ -80,8 +78,28 @@ def serialize(doc: EffectDocument) -> dict[str, Any]:
             per_slot[att.name] = data
         skin_attachments[slot.name] = per_slot
 
+    animations = {doc.animation_name: _animation(doc, doc.bone_timelines, doc.slot_timelines)}
+    for name, (bone_timelines, slot_timelines) in doc.extra_animations.items():
+        animations[name] = _animation(doc, bone_timelines, slot_timelines)
+
+    return {
+        "skeleton": {
+            "spine": SPINE_VERSION,
+            "fps": _n(doc.timing.fps),
+            "images": "./images/",
+            "audio": "",
+        },
+        "bones": bones,
+        "slots": slots,
+        "skins": [{"name": "default", "attachments": skin_attachments}],
+        "animations": animations,
+    }
+
+
+def _animation(doc: EffectDocument, bone_timelines: dict, slot_timelines: dict) -> dict[str, Any]:
+    t = doc.timing.seconds
     anim_bones: dict[str, Any] = {}
-    for bone_name, tl in doc.bone_timelines.items():
+    for bone_name, tl in bone_timelines.items():
         out: dict[str, Any] = {}
         if tl.rotate:
             keys = []
@@ -102,7 +120,7 @@ def serialize(doc: EffectDocument) -> dict[str, Any]:
             anim_bones[bone_name] = out
 
     anim_slots: dict[str, Any] = {}
-    for slot_name, tl in doc.slot_timelines.items():
+    for slot_name, tl in slot_timelines.items():
         out = {}
         if tl.attachment:
             keys = [{"time": _n(t(k.u)), "name": k.name} for k in tl.attachment]
@@ -125,19 +143,7 @@ def serialize(doc: EffectDocument) -> dict[str, Any]:
         animation["slots"] = anim_slots
     if anim_bones:
         animation["bones"] = anim_bones
-
-    return {
-        "skeleton": {
-            "spine": SPINE_VERSION,
-            "fps": _n(doc.timing.fps),
-            "images": "./images/",
-            "audio": "",
-        },
-        "bones": bones,
-        "slots": slots,
-        "skins": [{"name": "default", "attachments": skin_attachments}],
-        "animations": {doc.animation_name: animation},
-    }
+    return animation
 
 
 def count_stats(data: dict[str, Any]) -> dict[str, int]:

@@ -216,3 +216,118 @@ def test_animations_follow_their_skin(qapp=None):
     assert len(win.timeline.listed_animations()) == 6
     d.dirty = False
     win.close()
+
+
+def test_an_animation_named_like_a_skin_shows_it():
+    d = Document()
+    d.data["skins"] += [{"name": "Idle", "attachments": {}}, {"name": "UI/Idle", "attachments": {}},
+                        {"name": "Emotes/Emote01", "attachments": {}}]
+    for name in ("Idle", "Emote01", "Idler"):
+        d.add_animation(name)
+    assert d.animation_skin("Idle") == "Idle", "exact name; on a tie the skin listed first"
+    assert d.animation_skin("Emote01") == "Emotes/Emote01"
+    assert d.animation_skin("Idler") is None
+
+
+def _art_in_skins_only(tmp_path) -> Path:
+    """A Spine JSON export whose default skin holds only a clipping mask, the art being in skins."""
+    images = tmp_path / "images"
+    images.mkdir()
+    from PIL import Image
+    Image.new("RGBA", (8, 8), (255, 0, 0, 255)).save(images / "body.png")
+    data = {"skeleton": {"spine": "3.8.75", "images": "./images/"},
+            "bones": [{"name": "root"}],
+            "slots": [{"name": "clip", "bone": "root", "attachment": "clip"},
+                      {"name": "body", "bone": "root", "attachment": "body"}],
+            "skins": [{"name": "default", "attachments": {"clip": {"clip": {
+                          "type": "clipping", "end": "body", "vertexCount": 3, "vertices": [0, 0, 10, 0, 0, 10]}}}},
+                      {"name": "Outfit", "attachments": {"body": {"body": {"width": 8, "height": 8}}}},
+                      {"name": "Other", "attachments": {"body": {"body": {"path": "gone", "width": 8, "height": 8}}}}],
+            "animations": {"Idle": {}}}
+    path = tmp_path / "skel.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return path
+
+
+def test_a_project_with_its_art_in_skins_opens_on_a_skin(tmp_path):
+    doc, notes = Document.import_spine_json(_art_in_skins_only(tmp_path))
+    assert doc.edit_skin == "Outfit", "the skin with the most images, not the empty default"
+    assert any("Showing the skin 'Outfit'" in n for n in notes)
+    assert doc.missing_images() == ["gone"]
+    assert any("1 image(s) not found" in n and "gone" in n for n in notes)
+    doc.data["animations"] = {"Other": {}}
+    assert doc.starting_skin() == "Other", "the first animation's own skin comes first"
+
+
+def test_a_project_with_art_in_the_default_skin_stays_on_it(doc):
+    assert doc.starting_skin() == "default"
+
+
+def test_a_skeleton_without_a_default_skin_gets_one_first():
+    d = Document({"skeleton": {"spine": "4.0.64"}, "bones": [{"name": "root"}], "slots": [],
+                  "skins": [{"name": "Outfit", "attachments": {}}, {"name": "default", "attachments": {}}]})
+    assert d.skin_names() == ["default", "Outfit"], "an existing default skin moves to the front"
+    d = Document({"skeleton": {"spine": "4.0.64"}, "bones": [{"name": "root"}], "slots": [],
+                  "skins": [{"name": "Outfit", "attachments": {}}]})
+    assert d.skin_names() == ["default", "Outfit"]
+    assert d.starting_skin() in d.skin_names()
+
+
+def test_a_named_attachment_without_a_path_uses_its_name_for_the_image(tmp_path):
+    images = tmp_path / "images"
+    images.mkdir()
+    from PIL import Image
+    Image.new("RGBA", (8, 8)).save(images / "body.png")
+    d = Document(images_dir=images)
+    d.add_slot("root", "torso")
+    d.skin["torso"] = {"pose_a": {"name": "body", "width": 8, "height": 8},
+                       "pose_b": {"name": "gone", "width": 8, "height": 8}}
+    assert d.missing_images() == ["gone"], "Spine's rule: path, else the attachment's name, else its key"
+
+
+def test_a_project_with_a_null_attachment_is_reported_as_damaged(tmp_path):
+    path = tmp_path / "broken.anim2d"
+    Document().save(path)
+    project = json.loads(path.read_text(encoding="utf-8"))
+    project["skeleton"]["skins"][0]["attachments"] = {"head": {"face": None}}
+    path.write_text(json.dumps(project), encoding="utf-8")
+    with pytest.raises(EditorError, match="broken.anim2d.*damaged"):
+        Document.load(path)
+
+
+@pytest.mark.parametrize("damage", [
+    lambda p: p["skeleton"]["skins"].append({}),  # a skin without a name
+    lambda p: p["skeleton"]["skins"][0]["attachments"].update({"head": {"face": {"name": None}}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [None]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": "soon"}]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": True}]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": 10 ** 309}]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": -1}]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"time": 0}]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": None}),
+    lambda p: (p["skeleton"]["skeleton"].update(spine="3.8.99"), p["skeleton"].update(animations={"hit": None})),
+], ids=["unnamed-skin", "null-name", "null-event", "text-time", "bool-time", "huge-time", "negative-time", "unnamed-event", "null-animation",
+        "null-animation-38"])
+def test_damaged_skins_and_events_are_reported_on_open(tmp_path, damage):
+    path = tmp_path / "broken.anim2d"
+    Document().save(path)
+    project = json.loads(path.read_text(encoding="utf-8"))
+    damage(project)
+    path.write_text(json.dumps(project), encoding="utf-8")
+    with pytest.raises(EditorError, match="broken.anim2d.*damaged"):
+        Document.load(path)
+
+
+def test_a_spine_json_with_a_null_event_key_is_reported(tmp_path):
+    path = tmp_path / "skel.json"
+    path.write_text(json.dumps({"skeleton": {}, "bones": [{"name": "root"}], "animations": {"hit": {"events": [None]}}}),
+                    encoding="utf-8")
+    with pytest.raises(EditorError, match="skel.json.*damaged"):
+        Document.import_spine_json(path)
+
+
+def test_a_spine_json_with_an_unnamed_skin_names_the_file(tmp_path):
+    path = tmp_path / "skel.json"
+    path.write_text(json.dumps({"skeleton": {}, "bones": [{"name": "root"}], "skins": [{}]}), encoding="utf-8")
+    with pytest.raises(EditorError, match="Cannot open skel.json.*damaged"):
+        Document.import_spine_json(path)

@@ -85,6 +85,11 @@ def icon_path() -> Path:
     return bundle_root() / "assets" / "anim2d.ico"
 
 
+def logo_path(dark_background: bool = True) -> Path:
+    """The Anim2D wordmark (tools/make_logo.py): light ink for dark backgrounds, dark ink otherwise."""
+    return bundle_root() / "assets" / ("anim2d-logo-light.png" if dark_background else "anim2d-logo.png")
+
+
 def apply_app_icon(app) -> None:
     from PySide6.QtGui import QIcon
     path = icon_path()

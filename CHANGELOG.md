@@ -3,7 +3,40 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
-## 0.18.1 (unreleased)
+## 0.19.0 (unreleased)
+
+A particle emitter for the FX Builder, and a new logo.
+
+### Added
+
+* **Particle emitter** for the FX Builder: particles are emitted over time and moved by gravity, drag, wind,
+  turbulence and an attractor, then baked to plain Spine keys. Emit from a point, line, circle, ring or a curved
+  **path**, where the spawn point travels along the curve or is spread over it. Size, spin, facing the direction of
+  travel, fades and colour over life. The same seed always gives the same effect.
+* **Loops and animation sets**: an emitter's **Phase** makes a one-shot, an intro, a seamless loop or an outro.
+  **Animation set** exports intro, loop and outro together, cut from one simulation, so they hand over without a
+  jump.
+* Five presets that use it: **Fire Embers**, **Blizzard**, **Galaxy Swirl**, **Dust Motes** (a loop) and
+  **Blazing Trail** (along a path).
+* **Insert FX → Trigger on event**: the FX plays each time the chosen event fires in the animation, instead of
+  once at a start time. An animation set is inserted as `<animation>_intro`, `_loop` and `_outro`.
+
+### Changed
+
+* **New logo.** The app icon is an "A" drawn as a rig (a joint dot, two bone legs ending in ring joints); the
+  new Anim2D wordmark is on the About page, the website and the README.
+* **File → Open** opens Spine `.spine` projects and `.json` exports directly.
+
+### Fixed
+
+* Spine projects whose art is all in named skins (the default skin holding only a clipping mask, say) opened
+  showing bare bones. The editor now opens on the first animation's skin, and an animation named exactly like a
+  skin uses that skin. Images missing from the images folder are listed on import.
+* Clipping masks in `.spine` projects with no end slot clipped nothing; they now clip to the end of the draw order.
+* `anim2d-fx generate` without `--name` failed with an instance-name error; it now names the instance
+  `fx_<preset>_01`.
+
+## 0.18.1 (2026-10-30)
 
 Fixes for the Mac app, and a website. 0.18.0 can't update itself on a Mac: download this version from the release
 page.
