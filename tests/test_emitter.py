@@ -143,3 +143,10 @@ def test_every_phase_lasts_its_whole_duration(library, make_settings, phase):
                 report = validate_output({**data, "animations": {name: animation}}, None, "fx_test_01",
                                          end_time=duration, strict_one_shot=False)
                 assert not [e for e in report.errors if "should end" in e], (name, seed, duration, report.errors)
+
+
+def test_an_emitter_with_no_particle_long_enough_is_an_error(library, make_settings):
+    # Every particle shorter-lived than the minimum: report it, rather than export an invisible effect.
+    with pytest.raises(ValueError, match="no particle"):
+        generate_effect(library.get("dust_motes"), make_settings(
+            "dust_motes", count=1, lifetime=0.05, lifetime_variance=1, seed=4))

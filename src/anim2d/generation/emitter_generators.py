@@ -196,6 +196,8 @@ def particle_emitter(b: EffectBuilder, rng: random.Random) -> None:
     animation_set = bool(s["animation_set"])
     phase = str(s["phase"])
     particles = _particles(s, duration, animation_set or phase != "one_shot", rng)
+    if not particles:
+        raise ValueError(f"no particle lives the {MIN_LIFE}s minimum: raise the lifetime or the particle count")
     image = "particle"  # every emitter preset names its image "particle"
     px = 1.0 / b.image_size(image)[0]  # scale for a 1 px wide image
     parts = []

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 import re
 import shutil
@@ -96,12 +97,21 @@ def _is_attachment(att: Any) -> bool:
     return isinstance(att, dict) and all(isinstance(att.get(key, ""), str) for key in ("name", "path"))
 
 
+def _is_time(value: Any) -> bool:
+    """A finite number of seconds (JSON true is not 1, and 1e309 is not a time)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
+
+
 def _is_animation(anim: Any) -> bool:
-    """An animation object whose event keys, if any, are objects naming an event at a numeric time."""
+    """An animation object whose event keys, if any, are objects naming an event at a finite time."""
     events = anim.get("events", []) if isinstance(anim, dict) else None
     return isinstance(events, list) and all(
-        isinstance(k, dict) and isinstance(k.get("name"), str) and
-        isinstance(k.get("time", 0), (int, float)) and not isinstance(k.get("time", 0), bool) for k in events)
+        isinstance(k, dict) and isinstance(k.get("name"), str) and _is_time(k.get("time", 0)) for k in events)
 
 
 def check_animations(data: dict[str, Any]) -> None:

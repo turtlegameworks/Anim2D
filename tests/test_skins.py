@@ -301,10 +301,11 @@ def test_a_project_with_a_null_attachment_is_reported_as_damaged(tmp_path):
     lambda p: p["skeleton"]["animations"].update({"hit": {"events": [None]}}),
     lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": "soon"}]}}),
     lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": True}]}}),
+    lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"name": "x", "time": 10 ** 309}]}}),
     lambda p: p["skeleton"]["animations"].update({"hit": {"events": [{"time": 0}]}}),
     lambda p: p["skeleton"]["animations"].update({"hit": None}),
     lambda p: (p["skeleton"]["skeleton"].update(spine="3.8.99"), p["skeleton"].update(animations={"hit": None})),
-], ids=["unnamed-skin", "null-name", "null-event", "text-time", "bool-time", "unnamed-event", "null-animation",
+], ids=["unnamed-skin", "null-name", "null-event", "text-time", "bool-time", "huge-time", "unnamed-event", "null-animation",
         "null-animation-38"])
 def test_damaged_skins_and_events_are_reported_on_open(tmp_path, damage):
     path = tmp_path / "broken.anim2d"
