@@ -20,6 +20,8 @@ import pytest
 from anim2d.editor.document import Document, EditorError
 from anim2d.formats.spine_project import SpineProjectError, load_spine_project, parse
 from anim2d.formats.spine_project import reader as kp
+from anim2d.formats.spine_project.convert import anim_name
+from anim2d.formats.spine_project.reader import Ref
 
 # Optional fixtures that cannot ship with the repository (Spine's own example projects and your own
 # .spine files). Point these at local folders to run the tests that need them.
@@ -37,6 +39,51 @@ needs_user = pytest.mark.skipif(not (USER and USER.is_dir()),
 def all_projects() -> list[str]:
     found = glob.glob(str(EXAMPLES / "*" / "*.spine")) if EXAMPLES else []
     return sorted(found + (glob.glob(str(USER / "**" / "*.spine"), recursive=True) if USER else []))
+
+
+# --- animation folder paths -----------------------------------------------------------------------
+
+def _folder(name, parent=None):
+    f = {"_class": "Obj6c", 1: name}
+    if parent is not None:
+        f[3] = parent
+    return f
+
+
+def _anim(name, folder=None):
+    a = {"_class": "Animation", 1: name}
+    if folder is not None:
+        a[7] = folder
+    return a
+
+
+def test_anim_name_no_folder():
+    assert anim_name(_anim("Happy")) == "Happy"
+
+
+def test_anim_name_single_folder():
+    folder = _folder("UI")
+    assert anim_name(_anim("Button", folder)) == "UI/Button"
+
+
+def test_anim_name_nested_folders():
+    inner = _folder("Effects")
+    outer = _folder("UI", inner)
+    assert anim_name(_anim("Sparkle", outer)) == "Effects/UI/Sparkle"
+
+
+def test_anim_name_with_ref():
+    folder = _folder("Walk")
+    a = _anim("cycle", folder)
+    a[7] = Ref(0, folder)
+    assert anim_name(a) == "Walk/cycle"
+
+
+def test_anim_name_folder_ref_chain():
+    top = _folder("Attacks")
+    nested = _folder("Combo", Ref(0, top))
+    a = _anim("punch", nested)
+    assert anim_name(a) == "Attacks/Combo/punch"
 
 
 # --- reader basics --------------------------------------------------------------------------------
