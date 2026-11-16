@@ -55,7 +55,22 @@ def flame(width: int = 96, height: int = 160) -> Image.Image:
     return _finish(ImageChops.lighter(outer, core), width, height)
 
 
+def steam_puff(size: int = 128) -> Image.Image:
+    """Very soft, see-through cloud for steam and vapour: a few blurred lobes under a radial falloff,
+    so overlapping puffs build up gently instead of reading as solid blobs."""
+    S = size * SS
+    mask, draw = _canvas(size, size)
+    for cx, cy, r in ((0.5, 0.54, 0.24), (0.36, 0.56, 0.16), (0.64, 0.57, 0.17), (0.46, 0.4, 0.17),
+                      (0.6, 0.42, 0.14)):
+        draw.ellipse(((cx - r) * S, (cy - r) * S, (cx + r) * S, (cy + r) * S), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(S * 0.07))
+    falloff = Image.radial_gradient("L").resize((S, S)).point(lambda v: int(255 * max(0.0, 1 - v / 255) ** 0.6))
+    mask = ImageChops.multiply(mask, falloff).point(lambda v: min(255, int(v * 1.35)))
+    return _finish(mask, size, size)
+
+
 def main() -> None:
+    _save(steam_puff(), "steam_rise", "particle")
     _save(dot(64), "notification_ping", "dot")
     _save(ring(), "notification_ping", "ring")
     _save(dot(48), "loading_spinner", "dot")

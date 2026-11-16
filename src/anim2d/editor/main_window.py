@@ -263,6 +263,8 @@ class EditorWindow(QMainWindow):
                      tip="Read every imported .psd/.ora file again and update changed layers")
         self._action(f, "&Export…", self.export_spine, "Ctrl+E",
                      "JSON, binary, GIF, PNG, APNG, PSD, JPEG, WebP, AVI, MOV or MP4")
+        self._action(f, "Playblast…", self.playblast, "Ctrl+Shift+B",
+                     "Record the animation as the viewport shows it to MP4, MOV, AVI, GIF, WebP or images")
         self._action(f, "Unity Bridge…", self.unity_bridge,
                      tip="Export straight into a Unity project for spine-unity, optionally on every save")
         self._action(f, "Export to Unity", self.export_to_unity, "Ctrl+Alt+E",
@@ -309,9 +311,12 @@ class EditorWindow(QMainWindow):
 
         v = bar.addMenu("&View")
         self._action(v, "Frame all", self.viewport.frame_all, "F")
-        bones = self._action(v, "Show bones", self._toggle_bones)
+        bones = self._action(v, "Show bones", self._toggle_bones, "Ctrl+H",
+                             "Hide the bones, IK and constraint lines to see the animation as it will look")
         bones.setCheckable(True)
         bones.setChecked(True)
+        self.show_bones_action = bones
+        self.state.view_changed.connect(self._sync_show_bones)
         images = self._action(v, "Show images", self._toggle_images)
         images.setCheckable(True)
         images.setChecked(True)
@@ -366,6 +371,18 @@ class EditorWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.mode_bar)
         self.mode_switch = ModeSwitch(self.state)
         self.mode_bar.addWidget(self.mode_switch)
+        self.mode_bar.addSeparator()
+        bones_button = QAction("🦴 Bones", self)  # shown/hidden in the viewport (Ctrl+H)
+        bones_button.setCheckable(True)
+        bones_button.setChecked(True)
+        bones_button.setToolTip("Show or hide the bones in the viewport (Ctrl+H)")
+        bones_button.triggered.connect(lambda _=False: self._guard(self._toggle_bones))
+        self.mode_bar.addAction(bones_button)
+        self.bones_button_action = bones_button
+        blast_button = QAction("🎬 Playblast", self)
+        blast_button.setToolTip("Record the viewport's animation to a video or images (Ctrl+Shift+B)")
+        blast_button.triggered.connect(lambda _=False: self._guard(self.playblast))
+        self.mode_bar.addAction(blast_button)
         self._action(v, "Switch Setup / Animate", self.toggle_mode, "Ctrl+Tab")
 
         for tool, label, key in TOOLS:  # keyboard shortcuts for the tools
@@ -472,8 +489,25 @@ class EditorWindow(QMainWindow):
                                 "drag a gizmo handle to change only that axis.\nEdit > Keyboard Shortcuts changes any key.")
 
     def _toggle_bones(self) -> None:
-        self.viewport.show_bones = not self.viewport.show_bones
-        self.viewport.update()
+        """View > Show bones (Ctrl+H): the same switch as Options > Bones > visible in the tool bar."""
+        on = not self.state.view_options["bones"]["visible"]
+        self.state.set_view_option("bones", "visible", on)
+        self.status_label.setText("Bones shown" if on else "Bones hidden (Ctrl+H shows them)")
+
+    def playblast(self) -> None:
+        """File > Playblast… (Ctrl+Shift+B): record the animation as the viewport frames it."""
+        if not list(self.doc.animation_names()):
+            raise EditorError("Make an animation first: a playblast records one")
+        from .playblast_dialog import PlayblastDialog
+        PlayblastDialog(self.viewport, self, store=self.store).exec()
+
+    def _sync_show_bones(self) -> None:
+        on = self.state.view_options["bones"]["visible"]
+        for action in (self.show_bones_action, getattr(self, "bones_button_action", None)):
+            if action is not None and action.isChecked() != on:
+                action.blockSignals(True)
+                action.setChecked(on)
+                action.blockSignals(False)
 
     def _toggle_images(self) -> None:
         self.viewport.show_images = not self.viewport.show_images
@@ -526,7 +560,14 @@ class EditorWindow(QMainWindow):
             self.state.set_vertex_selection(set())
             return
         if sel.kind == "bone":
-            self.doc.delete_bone(sel.name)
+            bones = self.state.selected_bones()
+            if len(bones) == 1:
+                self.doc.delete_bone(sel.name)
+                return
+            self.doc.checkpoint(f"Delete {len(bones)} bones")
+            for bone in bones:  # a bone may already be gone with its deleted parent
+                if self.doc.has_bone(bone) and bone != self.doc.root_name:
+                    self.doc.delete_bone(bone, record=False)
         elif sel.kind == "slot":
             self.doc.delete_slot(sel.name)
         elif sel.kind == "attachment":
