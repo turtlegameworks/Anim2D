@@ -10,7 +10,7 @@ Bottom: New… (what can be created for the selection), Set Parent, Add to Skin 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QColor
+from PySide6.QtGui import QAction, QBrush, QColor
 from PySide6.QtWidgets import (QHBoxLayout, QInputDialog, QLineEdit, QMenu, QMessageBox, QPushButton, QToolButton,
                                QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
@@ -19,6 +19,12 @@ from .state import EditorState
 
 ROLE = Qt.ItemDataRole.UserRole
 NAME, EYE, SKIN = 0, 1, 2
+EXTRA_SELECTED = QBrush(QColor(255, 207, 64, 70))  # the other bones of a Ctrl+click selection
+
+
+def _ctrl_held() -> bool:
+    from PySide6.QtWidgets import QApplication
+    return bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier)
 FILTERS = (("bones", "Bones", "🦴"), ("slots", "Slots", "▣"), ("attachments", "Attachments", "●"),
            ("constraints", "Constraints", "⛓"))
 KIND_FILTER = {"bone": "bones", "slot": "slots", "attachment": "attachments", "placeholder": "attachments",
@@ -250,6 +256,10 @@ class TreePanel(QWidget):
             self.tree.topLevelItem(0).setExpanded(True)
 
     def _sync_selection(self) -> None:
+        extra = set(self.state.extra_bones)  # Ctrl+click: the other selected bones get a highlight
+        for item in self._items():
+            kind, name, _ = item.data(NAME, ROLE)
+            item.setBackground(NAME, EXTRA_SELECTED if kind == "bone" and name in extra else QBrush())
         sel = self.state.selection
         if sel.empty:
             return
@@ -270,15 +280,20 @@ class TreePanel(QWidget):
                                      and doc.bone(sel.name).get("length", 0) > 0)
 
     def _clicked(self, item, column) -> None:
+        kind, name, _ = item.data(NAME, ROLE)
         if column == EYE:
-            kind, name, _ = item.data(NAME, ROLE)
             if kind in ("bone", "slot"):
                 self.state.set_hidden(kind, name, (kind, name) not in self.state.hidden)
+        elif kind == "bone" and _ctrl_held():  # Ctrl+click: add the bone to the selection or take it out
+            self.state.toggle_bone(name)
+            self._sync_selection()
 
     def _current_changed(self, item, _prev) -> None:
         if self._building or item is None:
             return
         kind, name, owner = item.data(NAME, ROLE)
+        if kind == "bone" and _ctrl_held():
+            return  # _clicked adds it to the selection
         if kind == "placeholder-skin":  # edit that skin and select its attachment
             skin, placeholder = name.split("\n")
             self.state.doc.set_edit_skin(skin)

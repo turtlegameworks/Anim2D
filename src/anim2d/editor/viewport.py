@@ -24,6 +24,7 @@ AXIS_X, AXIS_Y, AXIS_FREE, RING = QColor("#ff5a5a"), QColor("#5ad15a"), QColor("
 SHAPE_COLORS = {"boundingbox": "#60f000", "clipping": "#ce3a3a", "path": "#ff7f00", "point": "#f1f100"}
 SELECTED = QColor("#ffcf40")
 PICK_PX = 7
+MULTI_SELECT_TOOLS = ("select", "translate", "rotate", "scale", "shear")  # Ctrl+click adds bones
 
 
 class Viewport(QWidget):
@@ -49,6 +50,8 @@ class Viewport(QWidget):
         self.setMinimumSize(400, 300)
         self.checker = False  # checkerboard background (the Preview, like Spine's)
         self.reference = None  # ReferenceMedia: footage drawn behind (or over) the skeleton
+        # Playblast: draw only the scene ({"bones", "grid", "hud": text or ""}), no tools or selection
+        self.capture: dict | None = None
         from .zoom_bar import ZoomBar
         self.zoom_bar = ZoomBar(self)
         for sig in (state.document_changed, state.time_changed, state.selection_changed, state.mode_changed,
@@ -128,6 +131,10 @@ class Viewport(QWidget):
         else:
             p.fillRect(self.rect(), QColor("#2a2c33") if self.state.mode == "setup" else QColor("#262a33"))
         view = self.view()
+        if self.capture is not None:
+            self._paint_capture(p, view)
+            p.end()
+            return
         self._draw_grid(p, view)
         self._draw_reference(p, front=False)
         ev = self.state.evaluator()
@@ -176,6 +183,32 @@ class Viewport(QWidget):
             p.drawRect(self.rect().adjusted(1, 1, -2, -2))
         p.end()
 
+    def _paint_capture(self, p: QPainter, view: QTransform) -> None:
+        """A playblast frame: the images (and optionally grid and bones) as the viewport frames them."""
+        cap = self.capture
+        if cap.get("grid", True):
+            self._draw_grid(p, view)
+        ev = self.state.evaluator()
+        t = self.state.time
+        if self.show_images and self.state.view_options["images"]["visible"]:
+            self._sync_images()
+            items = [i for i in ev.draw_items(t) if not self.state.slot_hidden(i.slot)]
+            draw_frame(p, items, self.cache, view)
+        p.resetTransform()
+        p.setOpacity(1)
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+        if cap.get("bones"):
+            self._draw_bones(p, ev.bone_world(t))
+        if cap.get("hud"):
+            font = p.font()
+            font.setPixelSize(max(11, self.height() // 40))
+            p.setFont(font)
+            box = QRectF(10, self.height() - font.pixelSize() - 14, self.width() - 20, font.pixelSize() + 8)
+            p.setPen(QColor(0, 0, 0, 180))
+            p.drawText(box.translated(1, 1), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, cap["hud"])
+            p.setPen(QColor("#f0f0f0"))
+            p.drawText(box, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, cap["hud"])
+
     def _draw_grid(self, p: QPainter, view: QTransform) -> None:
         from ..preview.grid import draw_grid, style_for
         from ..preview.grid import background_for
@@ -208,13 +241,13 @@ class Viewport(QWidget):
                 p.drawText(self.to_screen(*item.points[0]) + QPointF(6, 12), item.attachment)
 
     def _draw_bones(self, p: QPainter, world: dict[str, affine.Affine]) -> None:
-        sel = self.state.selection
+        chosen = set() if self.capture is not None else set(self.state.selected_bones())
         for bone in self.state.doc.bones:
             if self.state.bone_hidden(bone["name"]):
                 continue
             m = world[bone["name"]]
             origin = self.to_screen(m[4], m[5])
-            selected = sel.kind == "bone" and sel.name == bone["name"]
+            selected = bone["name"] in chosen
             color = SELECTED if selected else QColor(f"#{bone['color'][:6]}") if bone.get("color") else BONE_COLOR
             length = bone.get("length", 0)
             if length > 0:
@@ -833,10 +866,30 @@ class Viewport(QWidget):
             ax, ay = affine.apply_vector(frame, vx, vy)
             length = math.hypot(ax, ay) or 1e-9
             axes[key] = (ax / length, ay / length)
+        others: dict[str, tuple] = {}  # the other selected bones (Ctrl+click): (parent world, start locals)
+        skip_self = False
+        if kind == "bone" and len(self.state.selected_bones()) > 1:
+            chosen = set(self.state.selected_bones())
+            locals_ = ev.bone_locals(self.state.time)
+
+            def under_chosen(b: str) -> bool:  # moving its ancestor already moves it
+                parent = doc.bone(b).get("parent")
+                while parent:
+                    if parent in chosen:
+                        return True
+                    parent = doc.bone(parent).get("parent")
+                return False
+            for b in chosen - {name}:
+                if op == "translate" and under_chosen(b):
+                    continue
+                parent = doc.bone(b).get("parent")
+                others[b] = (world[parent] if parent else affine.IDENTITY, locals_[b][:7])
+            skip_self = op == "translate" and under_chosen(name)
+        label = name.split(chr(10))[-1] if not others else f"{len(others) + 1} bones"
         self._drag = {"op": op, "kind": kind, "name": name, "parent": parent_world, "own": own, "axis": axis,
-                      "axes": axes,
+                      "axes": axes, "others": others, "skip_self": skip_self,
                       "start_mouse": (wx, wy), "start": start, "recorded": False,
-                      "label": f"{op.capitalize()} {name.split(chr(10))[-1]}"}
+                      "label": f"{op.capitalize()} {label}"}
         return True
 
     def _begin_vertex_drag(self, mesh: tuple[str, str], op: str, wx: float, wy: float) -> bool:
@@ -926,6 +979,7 @@ class Viewport(QWidget):
         ox, oy = d["own"][4], d["own"][5]
         axis = d.get("axis")
         values: dict[str, float] = {}
+        group: dict[str, dict[str, float]] = {}  # the other selected bones get the same change
         if d["op"] == "translate":
             mx, my = wx - sx, wy - sy
             if axis in ("x", "y"):  # along one gizmo axis (Local, Parent or World axes)
@@ -934,13 +988,17 @@ class Viewport(QWidget):
                 mx, my = ax * along, ay * along
             dx, dy = affine.apply_vector(affine.invert(d["parent"]), mx, my)
             values = {"x": x0 + dx, "y": y0 + dy}
+            for b, (parent, start) in d.get("others", {}).items():
+                bx, by = affine.apply_vector(affine.invert(parent), mx, my)
+                group[b] = {"x": start[0] + bx, "y": start[1] + by}
         elif d["op"] == "rotate":
             a0 = math.degrees(math.atan2(sy - oy, sx - ox))
             a1 = math.degrees(math.atan2(wy - oy, wx - ox))
-            delta = (a1 - a0 + 180) % 360 - 180
-            if affine.is_flipped(d["parent"]):
-                delta = -delta
+            screen_delta = (a1 - a0 + 180) % 360 - 180
+            delta = -screen_delta if affine.is_flipped(d["parent"]) else screen_delta
             values = {"rotation": r0 + delta}
+            for b, (parent, start) in d.get("others", {}).items():
+                group[b] = {"rotation": start[2] + (-screen_delta if affine.is_flipped(parent) else screen_delta)}
         elif d["op"] == "scale":
             if axis in ("x", "y"):  # along the bone's own axis: the projected distance changes
                 vx, vy = affine.apply_vector(d["own"], *((1, 0) if axis == "x" else (0, 1)))
@@ -961,8 +1019,18 @@ class Viewport(QWidget):
             if affine.is_flipped(d["parent"]):
                 delta = -delta
             values = {"shearY": shy0 + delta} if axis == "y" else {"shearX": shx0 + delta}
+            for b, (parent, start) in d.get("others", {}).items():
+                group[b] = {"shearY": start[6] + delta} if axis == "y" else {"shearX": start[5] + delta}
+        if d["op"] == "scale" and d.get("others"):  # the same factor on each bone's own scale
+            factors = {k: v / (scx0 if k == "scaleX" else scy0) if (scx0 if k == "scaleX" else scy0) else 1.0
+                       for k, v in values.items()}
+            for b, (parent, start) in d["others"].items():
+                group[b] = {k: (start[3] if k == "scaleX" else start[4]) * f for k, f in factors.items()}
         if d["kind"] == "bone":
-            self.state.apply_bone_pose(d["name"], record=False, **values)
+            if not d.get("skip_self"):
+                self.state.apply_bone_pose(d["name"], record=False, **values)
+            for b, pose in group.items():
+                self.state.apply_bone_pose(b, record=False, **pose)
         else:
             slot, att = d["name"].split("\n")
             self.state.doc.set_attachment(slot, att, record=False, **values)
@@ -1058,6 +1126,26 @@ class Viewport(QWidget):
         if tool == "select" and self.state.vertex_selection:
             self.state.set_vertex_selection(set())
         hit = self.pick(pos)
+        if mods & Qt.KeyboardModifier.ControlModifier and tool in MULTI_SELECT_TOOLS:
+            # Ctrl+click: add the bone to the selection or take it out; then drag every selected bone
+            if hit and hit[0] == "bone":
+                self.state.toggle_bone(hit[1])
+                if hit[1] in self.state.selected_bones():
+                    wx, wy = self.to_world(pos)
+                    self.begin_drag(wx, wy)
+                count = len(self.state.selected_bones())
+                self.status.emit(f"{count} bone{'s' if count != 1 else ''} selected")
+            return
+        if hit and hit[0] == "bone" and self.state.extra_bones and hit[1] in self.state.selected_bones() \
+                and tool in MULTI_SELECT_TOOLS:
+            # clicking a bone that is already selected keeps the group: drag them all, this one active
+            bones = self.state.selected_bones()
+            self.state.selection = replace(self.state.selection, name=hit[1])
+            self.state.extra_bones = [b for b in bones if b != hit[1]]
+            self.state.selection_changed.emit()
+            wx, wy = self.to_world(pos)
+            self.begin_drag(wx, wy)
+            return
         if tool != "create" and hit:
             self.state.select(*hit)
         elif tool == "select" and not hit:

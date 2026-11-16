@@ -1622,16 +1622,20 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         return errors, warnings
 
     def export_data(self, stamp: str = STAMP_40) -> tuple[dict[str, Any], list[str]]:
-        """The skeleton in the layout of the stamp's Spine version (4.x as is, 3.8 converted).
-        Returns (data, notes about anything 3.8 could not express exactly)."""
+        """The skeleton in the layout of the stamp's Spine version (4.0 as is, 4.2/4.3 and 3.8
+        converted). Returns (data, notes about anything the version could not express exactly)."""
+        from ..formats import spine42
         data = copy.deepcopy(self.data)
         data["skeleton"] = {"spine": STAMP_40, "fps": self.fps, "images": "./images/", "audio": ""}
         notes = []
-        if data.pop("physics", None):  # 3.8/4.0 runtimes have no physics
-            notes.append("Physics constraints are not exported (Spine 3.8/4.0 runtimes have none): "
+        if data.pop("physics", None):  # the editor's own simulation; baking matches it on every runtime
+            notes.append("Physics constraints are not exported (Anim2D's physics is its own simulation): "
                          "use Edit > Bake physics to keys")
         for anim in data["animations"].values():
             self._prune(anim)
+        if spine42.version_of(stamp) >= (4, 1):
+            data, more = spine42.upgrade(data, stamp)
+            return data, notes + more
         if stamp.startswith("4."):
             data["skeleton"]["spine"] = stamp
             return data, notes
@@ -1706,7 +1710,7 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
                     if file.exists():
                         raise EditorError(f"{file.name} already exists")
         if binary and not stamp.startswith("4.0"):
-            raise EditorError("Binary (.skel) export is Spine 4.0 only; choose JSON for Spine 3.8")
+            raise EditorError("Binary (.skel) export is Spine 4.0 only; choose JSON for Spine 3.8, 4.2 or 4.3")
         data, notes = self.export_data(stamp)
         warnings = warnings + notes
         if cleanup:

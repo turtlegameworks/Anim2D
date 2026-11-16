@@ -26,7 +26,7 @@ class UnityDialog(QDialog):
         row.addWidget(browse)
         self.folder = QLineEdit(s.folder)
         self.version = QComboBox()
-        self.version.addItems(["4.0", "3.8"])
+        self.version.addItems(list(unity_bridge.RUNTIME_STAMPS))
         self.version.setCurrentText(s.version)
         self.pma = QCheckBox("Premultiplied alpha (spine-unity's default materials)")
         self.pma.setChecked(s.premultiply_alpha)
@@ -75,7 +75,7 @@ class UnityDialog(QDialog):
         if path:
             self.project.setText(path)
             runtime = unity_bridge.detect_runtime(Path(path))
-            if runtime in ("3.8", "4.0"):
+            if runtime in unity_bridge.RUNTIME_STAMPS:
                 self.version.setCurrentText(runtime)
 
     def _update(self) -> None:
@@ -91,8 +91,8 @@ class UnityDialog(QDialog):
         runtime = unity_bridge.detect_runtime(Path(s.project))
         rel = target.relative_to(Path(s.project)).as_posix()
         note = f"spine-unity {runtime} found." if runtime else "spine-unity isn't installed in this project yet."
-        if runtime and runtime not in ("3.8", "4.0"):
-            note += f" Anim2D exports 3.8/4.0 data; spine-unity {runtime} may not read it."
+        if runtime and runtime not in unity_bridge.RUNTIME_STAMPS:
+            note += f" Anim2D exports 3.8, 4.0, 4.2 and 4.3 data; spine-unity {runtime} may not read it."
         self.info.setText(f"Writes {rel}/{target.name}.json, .atlas.txt and PNG pages. {note}")
 
     def _save(self) -> None:

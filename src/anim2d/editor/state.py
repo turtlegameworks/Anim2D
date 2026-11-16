@@ -50,6 +50,7 @@ class EditorState(QObject):
         self.pose_overrides: dict[str, dict[int, float]] = {}  # unkeyed changes when Auto Key is off
         self.pose_clipboard: dict[str, tuple[float, ...]] = {}  # Edit > Copy pose
         self.selection = Selection()
+        self.extra_bones: list[str] = []  # other selected bones (Ctrl+click); the selection is the active one
         self.tool = "select"
         self.vertex_selection: set[int] = set()  # selected vertices of the active mesh
         self.mesh_drag_mode = "reshape"  # setup-mode vertex drags: "reshape", "mesh" or "uv"
@@ -101,7 +102,11 @@ class EditorState(QObject):
                 self.mode_changed.emit()
         if not self._selection_exists(self.selection):
             self.selection = Selection()
+            self.extra_bones = []
             self.vertex_selection = set()
+            self.selection_changed.emit()
+        elif self.extra_bones and not all(self.doc.has_bone(b) for b in self.extra_bones):
+            self.extra_bones = [b for b in self.extra_bones if self.doc.has_bone(b)]
             self.selection_changed.emit()
         if self.vertex_selection and max(self.vertex_selection) >= self._active_vertex_count():
             self.vertex_selection = set()
@@ -140,12 +145,31 @@ class EditorState(QObject):
 
     def select(self, kind: str | None, name: str = "", owner: str = "") -> None:
         sel = Selection(kind, name, owner)
-        if sel != self.selection:
+        if sel != self.selection or self.extra_bones:
             self.selection = sel
+            self.extra_bones = []
             self.vertex_selection = set()
             if kind == "animation":
                 self.set_animation(name)
             self.selection_changed.emit()
+
+    def selected_bones(self) -> list[str]:
+        """Every selected bone, the active one first (empty when the selection is not a bone)."""
+        if self.selection.kind != "bone":
+            return []
+        return [self.selection.name, *(b for b in self.extra_bones if b != self.selection.name)]
+
+    def toggle_bone(self, bone: str) -> None:
+        """Ctrl+click: add a bone to the selection (it becomes the active one), or take it out."""
+        bones = self.selected_bones()
+        if bone in bones:
+            bones.remove(bone)
+        else:
+            bones.insert(0, bone)
+        self.vertex_selection = set()
+        self.selection = Selection("bone", bones[0]) if bones else Selection()
+        self.extra_bones = bones[1:]
+        self.selection_changed.emit()
 
     def set_vertex_selection(self, vertices: set[int]) -> None:
         if vertices != self.vertex_selection:
@@ -378,13 +402,17 @@ class EditorState(QObject):
                                   y=values.get("shearY", current[6]) - setup.get("shearY", 0))
 
     def key_selected_bone(self, timelines: tuple[str, ...] = ("rotate", "translate", "scale", "shear")) -> None:
-        """Key the selected bone's current pose (K)."""
+        """Key the selected bones' current pose (K)."""
         if not self.animating or self.selection.kind != "bone":
             raise EditorError("Select a bone in Animate mode to set a key")
-        bone = self.selection.name
-        current = self.evaluator().bone_locals(self.time)[bone]
+        bones = self.selected_bones()
+        self.doc.checkpoint(f"Key {bones[0]}" if len(bones) == 1 else f"Key {len(bones)} bones")
+        locals_ = self.evaluator().bone_locals(self.time)
+        for bone in bones:
+            self._key_bone(bone, locals_[bone], timelines)
+
+    def _key_bone(self, bone: str, current, timelines: tuple[str, ...]) -> None:
         setup = self.doc.bone(bone)
-        self.doc.checkpoint(f"Key {bone}")
         if "translate" in timelines:
             self.doc.set_bone_key(self.animation, bone, "translate", self.time, record=False,
                                   x=current[0] - setup.get("x", 0), y=current[1] - setup.get("y", 0))

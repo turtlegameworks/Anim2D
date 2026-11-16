@@ -19,6 +19,7 @@ from pathlib import Path
 
 from ..formats.atlas import PackSettings
 from ..formats.spine40 import STAMP_38, STAMP_40
+from ..formats.spine42 import STAMP_42, STAMP_43
 from .document import Document, EditorError
 
 STAMP_FILE = Path("Library") / "Anim2D" / "refresh.txt"  # outside Assets: Unity never imports it
@@ -57,11 +58,14 @@ static class Anim2DBridge
 """
 
 
+# spine-unity version -> the data version written for it
+RUNTIME_STAMPS = {"4.3": STAMP_43, "4.2": STAMP_42, "4.0": STAMP_40, "3.8": STAMP_38}
+
 @dataclass
 class UnitySettings:
     project: str = ""  # the Unity project folder (with Assets/ and ProjectSettings/)
     folder: str = "Assets/Spine"  # where in the project; the skeleton gets a subfolder of its own
-    version: str = "4.0"  # data version for the spine-unity runtime: "4.0" or "3.8"
+    version: str = "4.0"  # data version for the spine-unity runtime: a key of RUNTIME_STAMPS
     premultiply_alpha: bool = True  # spine-unity's default materials expect PMA textures
     on_save: bool = False  # export every time the project is saved
     scale: float = 1.0
@@ -136,7 +140,7 @@ def export_to_unity(doc: Document, s: UnitySettings | None = None) -> tuple[Path
     folder.mkdir(parents=True, exist_ok=True)
     name = folder.name
     out = folder / f"{name}.json"
-    stamp = STAMP_38 if s.version.startswith("3") else STAMP_40
+    stamp = RUNTIME_STAMPS.get(s.version[:3], STAMP_40)
     atlas = PackSettings(premultiply_alpha=s.premultiply_alpha, scale=s.scale, atlas_extension=".atlas.txt",
                          max_width=4096, max_height=4096)
     warnings = doc.export_spine_json(out, stamp=stamp, overwrite=True, atlas=atlas)
