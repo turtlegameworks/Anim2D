@@ -3,6 +3,8 @@
   * spine-ts 3.8 core runtime and 3.8 example exports (spine-runtimes branch 3.8)
   * spine-ts 4.0.31 core runtime (npm @esotericsoftware/spine-core) and 4.0 example exports
     (spine-runtimes branch 4.0)
+  * spine-ts 4.1.54, 4.2.120 and 4.3.13 core runtimes (npm @esotericsoftware/spine-core), to check
+    the 4.1 to 4.3 exports play like the 4.0 data they come from
   * the images of spineboy (3.8), used by the template and editor tests
 
 They are used only for local testing and are not committed or redistributed;
@@ -53,6 +55,13 @@ FILES = {
 }
 CORE_40 = ("v40/spine-core-4.0.js", "package/dist/iife/spine-core.js",
            "c703fc90e26fc58dd84635655de2b6643f25cc8e5ca9f65c18869274a395b93f")
+# The newer cores Anim2D exports for (npm @esotericsoftware/spine-core), for the 4.x parity tests.
+CORES_4X = {
+    "4.1.54": ("v4x/spine-core-4.1.js", "395da79e40903e8bc979e7eabe008982c0d02d310a6806a2c31655d48a898db0"),
+    "4.2.120": ("v4x/spine-core-4.2.js", "fc0fc8b45b326d09cee311c15fff59d20dee17a87bc93e738496272a3d06bd66"),
+    "4.3.13": ("v4x/spine-core-4.3.js", "ee1b4265a33888946148a1f63563d94649d722b4147cef3a5739c00b2fa009af"),
+}
+NPM = "https://registry.npmjs.org/@esotericsoftware/spine-core/-/spine-core-{}.tgz"
 
 
 def _get(url: str) -> bytes:
@@ -77,6 +86,9 @@ def main() -> None:
     target, member, sha = CORE_40
     with tarfile.open(fileobj=io.BytesIO(_get(CORE_40_TARBALL)), mode="r:gz") as archive:
         _write(target, archive.extractfile(member).read(), sha)
+    for version, (target, sha) in CORES_4X.items():
+        with tarfile.open(fileobj=io.BytesIO(_get(NPM.format(version))), mode="r:gz") as archive:
+            _write(target, archive.extractfile(member).read(), sha)
 
     # Images referenced by the spineboy export (immutable at the pinned commit).
     skeleton = json.loads((VENDOR / "spineboy" / "spineboy-ess.json").read_text(encoding="utf-8"))

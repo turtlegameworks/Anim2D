@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout, QLabel,
                                QVBoxLayout)
 
+from ..formats.spine4x import RUNTIMES
 from ..packaging.engine_export import EngineExport
 
 ENGINES = [("Unity (spine-unity)", True), ("Godot, Cocos, Phaser, PixiJS, libGDX, Unreal, other", False)]
@@ -18,7 +19,8 @@ class EngineExportDialog(QDialog):
         for label, unity in ENGINES:
             self.engine.addItem(label, unity)
         self.version = QComboBox()
-        self.version.addItems(["4.0", "3.8"])
+        self.version.addItems(RUNTIMES)
+        self.version.setCurrentText("4.0")
         self.format = QComboBox()
         self.format.addItem("JSON (.json)", False)
         self.format.addItem("Binary (.skel, smaller and faster)", True)

@@ -24,7 +24,7 @@ from typing import Any, Callable
 from PIL import Image
 
 from ..formats import atlas as atlas_packer
-from ..formats import binary40, spine40
+from ..formats import binary40, spine4x, spine40
 from ..formats import curves as cv
 from ..formats import timelines40 as tl40
 from ..models.effect import Color
@@ -1621,20 +1621,28 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
         warnings = [w for w in report.warnings if "stay visible after" not in w]
         return errors, warnings
 
-    def export_data(self, stamp: str = STAMP_40) -> tuple[dict[str, Any], list[str]]:
-        """The skeleton in the layout of the stamp's Spine version (4.x as is, 3.8 converted).
-        Returns (data, notes about anything 3.8 could not express exactly)."""
+    def export_data(self, stamp: str = STAMP_40, convert: bool = True) -> tuple[dict[str, Any], list[str]]:
+        """The skeleton in the layout of the stamp's Spine version (4.0 as is; 3.8, 4.1, 4.2 and 4.3
+        converted). Returns (data, notes about anything that plays differently there).
+        convert=False keeps a 4.1+ export in the 4.0 layout (still stamped 4.0), for the clean-up
+        steps that read that layout; spine4x.upgrade then finishes it."""
         data = copy.deepcopy(self.data)
         data["skeleton"] = {"spine": STAMP_40, "fps": self.fps, "images": "./images/", "audio": ""}
         notes = []
-        if data.pop("physics", None):  # 3.8/4.0 runtimes have no physics
-            notes.append("Physics constraints are not exported (Spine 3.8/4.0 runtimes have none): "
+        if data.pop("physics", None):  # Anim2D's springs are its own; no runtime plays them
+            notes.append("Physics constraints are not exported (Spine runtimes do not play Anim2D's physics): "
                          "use Edit > Bake physics to keys")
         for anim in data["animations"].values():
             self._prune(anim)
         if stamp.startswith("4."):
-            data["skeleton"]["spine"] = stamp
-            return data, notes
+            if stamp.startswith("4.0"):
+                data["skeleton"]["spine"] = stamp
+                return data, notes
+            try:
+                notes += spine4x.runtime_notes(data, stamp)
+            except ValueError as exc:
+                raise EditorError(str(exc)) from None
+            return (spine4x.upgrade(data, stamp) if convert else data), notes
         data, more = spine40.downgrade(data, stamp=stamp)
         return data, notes + more
 
@@ -1687,7 +1695,7 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
                           copy_images: bool = True, binary: bool = False,
                           atlas: atlas_packer.PackSettings | None = None, nonessential: bool = True,
                           pretty: bool = True, cleanup: bool = False, javascript: bool = False) -> list[str]:
-        """Write Spine JSON for the stamp's version (4.0 by default, or 3.8) plus images/ next to it.
+        """Write Spine JSON for the stamp's version (4.0 by default; 3.8, 4.1, 4.2 or 4.3) plus images/ next to it.
         binary=True writes Spine 4.0 binary (.skel) instead. With atlas settings the images are packed
         into <name>.atlas and its page PNGs instead of copied. nonessential=False leaves out what the
         runtimes do not need, cleanup removes keys that change nothing, pretty indents the JSON and
@@ -1706,8 +1714,9 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
                     if file.exists():
                         raise EditorError(f"{file.name} already exists")
         if binary and not stamp.startswith("4.0"):
-            raise EditorError("Binary (.skel) export is Spine 4.0 only; choose JSON for Spine 3.8")
-        data, notes = self.export_data(stamp)
+            raise EditorError("Binary (.skel) export is Spine 4.0 only; choose JSON for other Spine versions")
+        newer = stamp.startswith("4.") and not stamp.startswith("4.0")  # 4.1+: converted last
+        data, notes = self.export_data(stamp, convert=not newer)
         warnings = warnings + notes
         if cleanup:
             removed = data_export.clean_animations(data)
@@ -1715,6 +1724,8 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
                 warnings.append(f"Animation clean up removed {removed} key(s) that changed nothing")
         if not nonessential and not binary:
             data_export.strip_nonessential(data)
+        if newer:
+            data = spine4x.upgrade(data, stamp)
         if binary:
             try:
                 payload = binary40.write_skel(data, nonessential=nonessential)

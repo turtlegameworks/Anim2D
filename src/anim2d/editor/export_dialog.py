@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QColorDialog, QComboBox,
                                QSpinBox, QStackedWidget, QVBoxLayout, QWidget)
 
 from ..formats.atlas import PackSettings
+from ..formats.spine4x import STAMP_41, STAMP_42, STAMP_43
 from .document import EDITOR_STAMP, RUNTIME_STAMP, STAMP_40, Document, EditorError
 from .form_widgets import PathField, SliderField, row, rule, section
 from .media_export import KINDS, SINGLE_FILE, MediaExport, export_media, preview_frames
@@ -22,6 +23,9 @@ from .packer_dialogs import TexturePackerSettingsDialog, load_settings
 
 VERSIONS = [
     (f"Spine 4.0 ({STAMP_40})", STAMP_40),
+    (f"Spine 4.3 ({STAMP_43})", STAMP_43),
+    (f"Spine 4.2 ({STAMP_42})", STAMP_42),
+    (f"Spine 4.1 ({STAMP_41})", STAMP_41),
     (f"Spine 3.8 ({RUNTIME_STAMP}) runtimes", RUNTIME_STAMP),
     ("Spine 3.8.75 editor import", EDITOR_STAMP),
 ]
@@ -181,9 +185,13 @@ class ExportDialog(QDialog):
         self.version.setEnabled(not binary)
         self.data_form.setRowVisible(self.format_row, not binary)
         notes = []
-        if self.version.currentData() != STAMP_40:
+        version = str(self.version.currentData())
+        if version.startswith("3."):
             notes.append("Spine 3.8 has no split or colour channel timelines and other curves; anything "
                          "3.8 cannot express is converted to extra keys.")
+        elif not version.startswith("4.0"):
+            notes.append(f"Spine {version[:3]} JSON: the 4.0 export's data in the {version[:3]} layout. The export "
+                         "notes any constraint that newer runtimes apply differently.")
         if binary:
             notes.append("Binary (.skel) is Spine 4.0: smaller and faster to load.")
         self.data_note.setText(" ".join(notes))

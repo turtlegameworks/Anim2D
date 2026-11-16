@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..formats.atlas import PackSettings
-from ..formats.spine40 import STAMP_38, STAMP_40
+from ..formats.spine4x import RUNTIMES, stamp_for
 from ..models.preset import PresetDefinition
 from ..models.settings import EffectSettings
 from .package import GenerationResult, write_package
@@ -39,7 +39,7 @@ and hides itself at the end.
 
 @dataclass
 class EngineExport:
-    version: str = "4.0"  # "4.0" or "3.8"
+    version: str = "4.0"  # a spine-runtimes version from spine4x.RUNTIMES ("4.3" … "3.8")
     binary: bool = False  # .skel instead of .json (4.0 only)
     unity: bool = False  # atlas named .atlas.txt, as spine-unity needs
     premultiply_alpha: bool = False
@@ -60,8 +60,11 @@ def export_for_engine(preset: PresetDefinition, settings: EffectSettings, destin
         result.report.errors.append(f"'{final_dir}' already exists. Choose a different instance name or remove "
                                     f"the old folder yourself.")
         return result
+    if o.version not in RUNTIMES:
+        result.report.errors.append(f"Spine {o.version} is not a version Anim2D exports for ({', '.join(RUNTIMES)})")
+        return result
     if o.binary and o.version != "4.0":
-        result.report.errors.append("Binary (.skel) export is Spine 4.0 only; choose JSON for Spine 3.8")
+        result.report.errors.append(f"Binary (.skel) export is Spine 4.0 only; choose JSON for Spine {o.version}")
         return result
     work = Path(tempfile.mkdtemp(prefix="fx_engine_"))
     staging = destination / f".{name}_runtime.tmp-{uuid.uuid4().hex[:8]}"
@@ -78,7 +81,7 @@ def export_for_engine(preset: PresetDefinition, settings: EffectSettings, destin
         atlas = PackSettings(premultiply_alpha=o.premultiply_alpha, scale=o.scale, max_width=o.max_page,
                              max_height=o.max_page, atlas_extension=".atlas.txt" if o.unity else ".atlas")
         try:
-            warnings = doc.export_spine_json(out, stamp=STAMP_40 if o.version == "4.0" else STAMP_38,
+            warnings = doc.export_spine_json(out, stamp=stamp_for(o.version),
                                              atlas=atlas, binary=o.binary, nonessential=False, pretty=False)
         except EditorError as exc:
             result.report.errors.append(str(exc))
