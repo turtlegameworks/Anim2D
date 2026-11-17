@@ -9,7 +9,7 @@ Previews: `screenshots/fx_presets/<id>.gif`.
 ## Using them in a game engine
 
 **Generate package** writes Spine 3.8 JSON and loose PNGs for importing into the Spine editor.
-**Export for game engine…** writes what the Spine runtimes load: `<name>.json` (Spine 4.0 or 3.8) or
+**Export for game engine…** writes what the Spine runtimes load: `<name>.json` (Spine 4.3, 4.2, 4.1, 4.0 or 3.8) or
 `<name>.skel` (4.0 binary), a packed texture atlas (`<name>.atlas`, or `<name>.atlas.txt` for Unity) and
 its PNG page, with optional premultiplied alpha and atlas scale. Use it with spine-unity, spine-godot,
 spine-cocos2dx, spine-phaser, spine-pixi, spine-libgdx and the other official runtimes.

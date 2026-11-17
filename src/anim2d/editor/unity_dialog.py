@@ -7,6 +7,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog,
                                QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
 
+from ..formats.spine4x import RUNTIMES
 from .document import Document, EditorError
 from . import unity_bridge
 from .unity_bridge import UnitySettings
@@ -26,7 +27,7 @@ class UnityDialog(QDialog):
         row.addWidget(browse)
         self.folder = QLineEdit(s.folder)
         self.version = QComboBox()
-        self.version.addItems(list(unity_bridge.RUNTIME_STAMPS))
+        self.version.addItems(RUNTIMES)
         self.version.setCurrentText(s.version)
         self.pma = QCheckBox("Premultiplied alpha (spine-unity's default materials)")
         self.pma.setChecked(s.premultiply_alpha)
@@ -75,7 +76,7 @@ class UnityDialog(QDialog):
         if path:
             self.project.setText(path)
             runtime = unity_bridge.detect_runtime(Path(path))
-            if runtime in unity_bridge.RUNTIME_STAMPS:
+            if runtime in RUNTIMES:
                 self.version.setCurrentText(runtime)
 
     def _update(self) -> None:
@@ -91,8 +92,10 @@ class UnityDialog(QDialog):
         runtime = unity_bridge.detect_runtime(Path(s.project))
         rel = target.relative_to(Path(s.project)).as_posix()
         note = f"spine-unity {runtime} found." if runtime else "spine-unity isn't installed in this project yet."
-        if runtime and runtime not in unity_bridge.RUNTIME_STAMPS:
-            note += f" Anim2D exports 3.8, 4.0, 4.2 and 4.3 data; spine-unity {runtime} may not read it."
+        if runtime and runtime not in RUNTIMES:
+            note += f" Anim2D exports data for Spine {', '.join(RUNTIMES)}; spine-unity {runtime} may not read it."
+        elif runtime and runtime != s.version:
+            note += f" Choose spine-unity version {runtime} to match it."
         self.info.setText(f"Writes {rel}/{target.name}.json, .atlas.txt and PNG pages. {note}")
 
     def _save(self) -> None:

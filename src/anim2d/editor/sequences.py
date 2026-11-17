@@ -1,6 +1,6 @@
 """Image sequences: numbered images (fire_01 … fire_12) played as a flip-book.
 
-Spine 4.1+ has a 'sequence' attachment, but the 3.8 and 4.0 runtimes Anim2D exports for do not,
+Spine 4.1+ has a 'sequence' attachment, but the 3.8 and 4.0 runtimes Anim2D also exports for do not,
 so a sequence is made of plain parts every runtime plays: one region attachment per frame in the
 slot, and attachment keys at the chosen frame rate.
 """

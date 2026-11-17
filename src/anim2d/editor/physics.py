@@ -4,8 +4,9 @@ Each constraint makes a bone's tip a weight on a spring: it lags behind when the
 overshoots and settles, and is pulled by gravity and wind. The simulation runs from the start of
 the animation at a fixed rate and its result is a rotation added to the bone.
 
-Spine 3.8 and 4.0 runtimes have no physics, so the result is baked to rotate keys (Edit >
-Bake physics), which every runtime plays. The Preview can show the simulation without baking.
+Spine runtimes don't play Anim2D's physics (3.8 to 4.1 have none, and 4.2+ physics constraints
+work differently), so the result is baked to rotate keys (Edit > Bake physics), which every
+runtime plays. The Preview can show the simulation without baking.
 Constraints are stored in data["physics"] with field names like Spine 4.2's, and are left out of
 exports.
 """

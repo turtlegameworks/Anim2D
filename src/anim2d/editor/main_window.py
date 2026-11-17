@@ -301,7 +301,7 @@ class EditorWindow(QMainWindow):
                      "Scale time, reverse, or loop a section of the current animation or the selected keys")
         self._action(e, "Bake physics to keys", self.bake_physics_keys,
                      tip="Key the physics (springy bones) into the current animation's rotations, so it "
-                         "plays on Spine 3.8/4.0 runtimes")
+                         "plays on every Spine runtime")
         self._action(e, "Simplify keys", self.simplify_animation,
                      tip="Remove keys the current animation can do without (within 0.1° / 0.1 px)")
         self._action(e, "Mirror bones…", self.mirror_selected, tip="Copy the selected bone chain, its slots and "
