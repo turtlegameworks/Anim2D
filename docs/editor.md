@@ -1,8 +1,9 @@
 # Anim2D
 
 A 2D skeletal animation editor that reads Spine 3.8 and 4.0 JSON and exports **Spine 4.0 JSON or
-binary (.skel)**, or Spine 3.8 JSON, with a texture packer and the FX library built in. Exports
-play in Spine 4.0 runtimes such as spine-unity 4.0 (or 3.8 runtimes when exported as 3.8).
+binary (.skel)**, Spine 4.1, 4.2 and 4.3 JSON, or Spine 3.8 JSON, with a texture packer and the FX
+library built in. Exports play in the Spine runtimes of the version chosen, such as spine-unity 4.0
+or 4.3.
 
 ![Setup mode](screenshots/editor_setup_mode.png)
 
@@ -377,7 +378,9 @@ The Weights tool (Shift+W) opens the **Weights** view, laid out like Spine's.
 | Animation layers | Preview → Layer on top | Plays a second animation on a track above: the timelines it keys replace the first animation's |
 | Bone chains | Tree bone menu → Add bone chain…; path attachment menu → Bone chain along this path… | A chain out of the bone's tip (count, length, curl), or along a path's curve |
 | Rig mesh | Tree mesh menu → Rig to the bones over it | Binds the mesh to the bones that reach it, weighted by distance |
-| Physics | Tree bone menu → Physics…; Preview → Physics; Edit → Bake physics to keys | Springy bones (stiffness, damping, inertia, mass, gravity, wind, limit, mix) for hair, cloth and tails. The Preview simulates them; Spine 3.8/4.0 runtimes have no physics, so bake them to rotate keys before exporting (exports leave the constraints out and say so) |
+| Physics | Tree bone menu → Physics…; Preview → Physics; Edit → Bake physics to keys | Springy bones (stiffness, damping, inertia, mass, gravity, wind, limit, mix) for hair, cloth and tails. The Preview simulates them; Spine runtimes don't play Anim2D's physics, so bake them to rotate keys before exporting (exports leave the constraints out and say so) |
+| Several bones at once | Ctrl+click bones in the viewport or the Tree (Command+click on a Mac) | Adds a bone to the selection or takes it out; the other selected bones are highlighted. Translate, Rotate, Scale and Shear drags move them all (a child of another selected bone is not moved twice), **K** keys them all and **Delete** deletes them all. Ctrl+click on anything else selects it as a plain click does |
+| Show / hide bones | View → Show bones (Ctrl+H; Control+H on a Mac, where Command+H hides the app), 🦴 Bones on the mode bar | Hides the bones and constraint lines to see the animation as it will look; the same switch as Options → Bones → visible |
 | History | View → History | Every undo step; click one to go back or forward to it |
 | Motion paths | View → Motion paths (Ctrl+Alt+M), Animate mode | The selected bone's path over the animation: a dot per frame, an orange diamond at each key. Drag a dot to move the bone at that frame (it sets the translate key there, whatever the parents do) |
 | Ease presets | Timeline → Curve… | Ease in/out (normal and strong), Overshoot, Anticipate, Anticipate + overshoot for the selected keys. **Bounce** and **Elastic** add keys between each selected key and the next (bone timelines) |
@@ -402,6 +405,7 @@ The Weights tool (Shift+W) opens the **Weights** view, laid out like Spine's.
 | Import Data… | Adds another Spine project's or Spine JSON's bones, slots, constraints, skins, events and animations to the open skeleton. What already exists is kept; a clashing animation name gets a number. One Undo removes it |
 | Import PSD… | Each Photoshop layer becomes an image (in a folder named after the PSD), a slot and an attachment placed where the layer sits; the canvas centre is the origin. 8-bit RGB or grayscale, uncompressed or RLE |
 | Export… (Ctrl+E) | See [Export](#export) |
+| Playblast… (Ctrl+Shift+B) | See [Playblast](#playblast) |
 | Unity Bridge…, Export to Unity (Ctrl+Alt+E) | See [Unity bridge](#unity-bridge) |
 | Texture Packer… (Ctrl+P) | Packs every PNG/JPEG in a folder (with subfolders) into an atlas; see [Texture Packer](#texture-packer) |
 | Texture Unpacker… | Writes every region of a `.atlas` (4.0 or 3.8) back out as its own PNG, at its original size with whitespace and rotation restored and premultiplied alpha undone. A region with an index is written as `name_<index>.png` |
@@ -486,7 +490,7 @@ and checks the result against Spine's own exports: see [Verification](#verificat
 | --- | --- |
 | Output folder, Extension | The file is `<folder>/<project name><extension>` (`.json` or `.skel` by default). ★ keeps favourite folders |
 | Format | **JSON**, or **JavaScript**: names without quotes (smaller; not strict JSON). **Pretty print** indents |
-| Version | **Spine 4.0** (`4.0.64`, default). **Spine 3.8** (`3.8.99`): 3.8 runtimes. **Spine 3.8.75**: importing into the Spine 3.8.75 editor (official 3.8 runtimes refuse data stamped `3.8.75`). Binary is 4.0 only |
+| Version | **Spine 4.0** (`4.0.64`, default). **Spine 4.3** (`4.3.75`), **4.2** (`4.2.22`) and **4.1** (`4.1.17`): JSON for those runtimes, such as spine-unity 4.3. **Spine 3.8** (`3.8.99`): 3.8 runtimes. **Spine 3.8.75**: importing into the Spine 3.8.75 editor (official 3.8 runtimes refuse data stamped `3.8.75`). Binary is 4.0 only |
 | Nonessential data | Off leaves out what only the editor uses: fps, images path, bone and shape colours, mesh edges and sizes |
 | Animation clean up | Leaves out keys that change nothing (a key equal to its neighbours where the curves are linear or stepped). The motion is unchanged |
 | Warnings | Shows the export's notes |
@@ -496,6 +500,21 @@ and checks the result against Spine's own exports: see [Verification](#verificat
 X/Y timelines, separate RGB and alpha timelines, and curves whose handles differ per channel.
 These are converted to extra linear keys, so 3.8 plays the same motion within 0.01 px or degree.
 The export lists what was converted.
+
+**4.1, 4.2 and 4.3 export:** the data is the same as the 4.0 export in each version's layout.
+4.1 moves deform keys under the attachment. 4.2 renames a bone's transform mode to `inherit`.
+4.3 lists all constraints in one `constraints` list in update order, and gives transform
+constraints a `source` bone and an explicit property map. Spine also changed some runtime math
+in 4.2 and 4.3, which no data can undo. Where a rig depends on it, the export names the constraint:
+
+* **4.2+, world shear read back:** shear that a world transform constraint puts on bones is read
+  back with the opposite sign when a later constraint moves them. Uneven scale under such
+  constraints can also add shear; that depends on the pose and is not named.
+* **4.2+, local partial angle mixes:** local, absolute transform constraints mix a rotate or
+  shear that is ever partway (as set, at a key, or between keys going from 0 to 1) without taking
+  the shortest way round.
+* **4.3, local scale mixes:** local, absolute transform constraints set the scale they mix,
+  where 4.0 to 4.2 divided it by the bone's own scale.
 
 ### Image and video
 
@@ -528,11 +547,32 @@ or uncompressed with alpha), **MOV** (PNG with alpha, or JPEG) and **MP4** (H.26
 * JPEG-based video is padded to an even width and height with the background colour.
 * Anim2D has no audio, so videos have no sound.
 
+## Playblast
+
+**File → Playblast…** (Ctrl+Shift+B, or 🎬 Playblast on the mode bar) records an animation as the
+viewport frames it: the zoom, pan and background the animator sees, without tools, gizmos or the
+selection. It is a quick review render; **File → Export** frames the skeleton itself.
+
+| Option | Choices |
+| --- | --- |
+| Animation, Range | The animation, all of it or a custom frame range; frames per second (default: the skeleton's) |
+| Size | 25 % to 200 % of the viewport's size |
+| Show | Bones, grid, and a HUD with the animation name and frame number |
+| Format | MP4 (H.264), MOV (PNG, lossless), AVI (Motion JPEG), GIF, WebP, APNG, or PNG or JPEG image sequences; quality for JPEG, Motion JPEG and WebP |
+| Repeat, Overwrite, Open when done | Plays the animation N times; replaces existing files; opens the result |
+
+Each frame is painted, then encoded on worker threads while the next one paints. MP4, MOV, AVI and
+image sequences are written as the frames come, so memory stays flat however long the playblast is.
+GIF, WebP and APNG are written by Pillow from all the frames, so they stay in memory: one byte a
+pixel each for GIF, four for WebP and about eight for APNG. The dialog says so when that passes
+1 GB. Cancelling removes what was written.
+
 ## Unity bridge
 
 **File → Unity Bridge…** exports straight into a Unity project for spine-unity: choose the project
 folder (the one with `Assets/`), a folder in `Assets` (default `Assets/Spine`), the spine-unity
-version (4.0 or 3.8; detected when spine-unity is installed), premultiplied alpha and atlas scale.
+version (4.3, 4.2, 4.1, 4.0 or 3.8; detected when spine-unity is installed), premultiplied alpha
+and atlas scale.
 Each skeleton goes to its own subfolder as `<name>.json`, `<name>.atlas.txt` and the atlas PNGs,
 which spine-unity turns into a SkeletonData asset. With **Export to Unity every time the project
 is saved** on, saving also exports; **Export to Unity** (Ctrl+Alt+E) exports at any time. The
@@ -574,7 +614,7 @@ Region names are the image paths (`parts/arm`), as the Spine runtimes look them 
 | Preview: plays animations on its own (speed, loop, skin), crossfades like the runtime's AnimationState | ✅ |
 | Setup / Animate interfaces with their own layouts; key buttons per transform; gizmos for translate, rotate, scale, shear | ✅ |
 | Spine-style tool bar (typed values, Local/Parent/World axes, compensation, select/visible/name options) and tree (search, filters, eye column, New…, Set Parent, Add to Skin, Split, skin placeholders, inherit flags) | ✅ |
-| Spine 3.8 and 4.0 JSON import; 4.0 JSON and binary (.skel) export; 3.8 JSON export | ✅ |
+| Spine 3.8 and 4.0 JSON import; 4.0 JSON and binary (.skel) export; 4.1, 4.2, 4.3 and 3.8 JSON export | ✅ |
 | Texture packer: atlas pages, whitespace strip, rotation, padding, scale, power of two, premultiplied alpha | ✅ |
 | FX presets and Spine templates inserted into a character animation | ✅ |
 | Meshes: grid creation from regions, vertex editing, weights (auto bind, per-vertex), deform keys | ✅ drawn textured, solved like the runtime |
@@ -600,7 +640,7 @@ Region names are the image paths (`parts/arm`), as the Spine runtimes look them 
 | Events and audio events | ✅ Events window; sounds play during playback (no balance) |
 | Image sequences, onion skin, pose copy/paste (mirrored), mirror bones, bake, simplify, animation layers in the Preview | ✅ |
 | PSD import, bone chains, mesh auto-rig | ✅ (PSD: no ZIP-compressed layers, no 16-bit) |
-| Physics constraints | ✅ simulated in the Preview, baked to keys for 3.8/4.0 runtimes |
+| Physics constraints | ✅ simulated in the Preview, baked to keys for every runtime |
 | Undo History window, several skeletons per project, Unity bridge | ✅ |
 
 ## Verification
@@ -616,6 +656,13 @@ Automated (`pytest`):
   * The pose evaluator matches the 4.0 runtime on Esoteric's 4.0 exports (spineboy, raptor).
   * 3.8 → 4.0 conversion poses identically in both runtimes.
   * 4.0 → 3.8 conversion stays within the baking tolerance.
+* **4.1, 4.2 and 4.3:** Esoteric's spineboy, raptor, tank, vine, stretchyman, mix-and-match and
+  goblins 4.0 exports, opened in Anim2D and exported for each version, pose the same in the
+  official spine-core 4.1.54, 4.2.120 and 4.3.13 runtimes as the 4.0 export does in 4.0.31. That
+  covers every animation of every skin: bone matrices, slot colours, attachments, deform and draw
+  order. Local, relative and world transform constraints with partial and keyed mixes and offsets,
+  and IK stretch, compress, uniform scale and softness, are checked the same way. So is each
+  runtime change that the export notes.
 * **Binary:** `.skel` files written by Anim2D load in the official 4.0 `SkeletonBinary`. Every
   sample of every animation matches the same data loaded from JSON: bone matrices, slot colours,
   attachments, draw order, IK, mesh vertices, skins and events. This holds for Esoteric's

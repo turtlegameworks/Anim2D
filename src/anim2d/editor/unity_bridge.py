@@ -18,8 +18,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from ..formats.atlas import PackSettings
-from ..formats.spine40 import STAMP_38, STAMP_40
-from ..formats.spine42 import STAMP_42, STAMP_43
+from ..formats.spine4x import stamp_for
 from .document import Document, EditorError
 
 STAMP_FILE = Path("Library") / "Anim2D" / "refresh.txt"  # outside Assets: Unity never imports it
@@ -58,14 +57,11 @@ static class Anim2DBridge
 """
 
 
-# spine-unity version -> the data version written for it
-RUNTIME_STAMPS = {"4.3": STAMP_43, "4.2": STAMP_42, "4.0": STAMP_40, "3.8": STAMP_38}
-
 @dataclass
 class UnitySettings:
     project: str = ""  # the Unity project folder (with Assets/ and ProjectSettings/)
     folder: str = "Assets/Spine"  # where in the project; the skeleton gets a subfolder of its own
-    version: str = "4.0"  # data version for the spine-unity runtime: a key of RUNTIME_STAMPS
+    version: str = "4.0"  # data version for the spine-unity runtime, from spine4x.RUNTIMES ("4.3" … "3.8")
     premultiply_alpha: bool = True  # spine-unity's default materials expect PMA textures
     on_save: bool = False  # export every time the project is saved
     scale: float = 1.0
@@ -140,7 +136,10 @@ def export_to_unity(doc: Document, s: UnitySettings | None = None) -> tuple[Path
     folder.mkdir(parents=True, exist_ok=True)
     name = folder.name
     out = folder / f"{name}.json"
-    stamp = RUNTIME_STAMPS.get(s.version[:3], STAMP_40)
+    try:
+        stamp = stamp_for(s.version)
+    except ValueError as exc:
+        raise EditorError(str(exc)) from None
     atlas = PackSettings(premultiply_alpha=s.premultiply_alpha, scale=s.scale, atlas_extension=".atlas.txt",
                          max_width=4096, max_height=4096)
     warnings = doc.export_spine_json(out, stamp=stamp, overwrite=True, atlas=atlas)

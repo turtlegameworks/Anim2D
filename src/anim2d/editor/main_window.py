@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSettings, Qt, QTimer
@@ -31,6 +32,10 @@ from .tree_panel import TreePanel
 from .viewport import Viewport
 
 PROJECT_FILTER = "Anim2D project (*.anim2d *.rig2d)"
+# Show bones: Ctrl+H, but the Control key on a Mac (Qt's "Ctrl" is Command there, and Command+H
+# hides the whole app).
+BONES_SHORTCUT = "Meta+H" if sys.platform == "darwin" else "Ctrl+H"
+BONES_KEY_LABEL = "Control+H" if sys.platform == "darwin" else "Ctrl+H"
 
 
 class EditorWindow(QMainWindow):
@@ -301,7 +306,7 @@ class EditorWindow(QMainWindow):
                      "Scale time, reverse, or loop a section of the current animation or the selected keys")
         self._action(e, "Bake physics to keys", self.bake_physics_keys,
                      tip="Key the physics (springy bones) into the current animation's rotations, so it "
-                         "plays on Spine 3.8/4.0 runtimes")
+                         "plays on every Spine runtime")
         self._action(e, "Simplify keys", self.simplify_animation,
                      tip="Remove keys the current animation can do without (within 0.1° / 0.1 px)")
         self._action(e, "Mirror bones…", self.mirror_selected, tip="Copy the selected bone chain, its slots and "
@@ -311,7 +316,7 @@ class EditorWindow(QMainWindow):
 
         v = bar.addMenu("&View")
         self._action(v, "Frame all", self.viewport.frame_all, "F")
-        bones = self._action(v, "Show bones", self._toggle_bones, "Ctrl+H",
+        bones = self._action(v, "Show bones", self._toggle_bones, BONES_SHORTCUT,
                              "Hide the bones, IK and constraint lines to see the animation as it will look")
         bones.setCheckable(True)
         bones.setChecked(True)
@@ -372,10 +377,10 @@ class EditorWindow(QMainWindow):
         self.mode_switch = ModeSwitch(self.state)
         self.mode_bar.addWidget(self.mode_switch)
         self.mode_bar.addSeparator()
-        bones_button = QAction("🦴 Bones", self)  # shown/hidden in the viewport (Ctrl+H)
+        bones_button = QAction("🦴 Bones", self)  # shown/hidden in the viewport (BONES_SHORTCUT)
         bones_button.setCheckable(True)
         bones_button.setChecked(True)
-        bones_button.setToolTip("Show or hide the bones in the viewport (Ctrl+H)")
+        bones_button.setToolTip(f"Show or hide the bones in the viewport ({BONES_KEY_LABEL})")
         bones_button.triggered.connect(lambda _=False: self._guard(self._toggle_bones))
         self.mode_bar.addAction(bones_button)
         self.bones_button_action = bones_button
@@ -489,10 +494,10 @@ class EditorWindow(QMainWindow):
                                 "drag a gizmo handle to change only that axis.\nEdit > Keyboard Shortcuts changes any key.")
 
     def _toggle_bones(self) -> None:
-        """View > Show bones (Ctrl+H): the same switch as Options > Bones > visible in the tool bar."""
+        """View > Show bones (Ctrl+H; Control+H on a Mac): the same switch as Options > Bones > visible."""
         on = not self.state.view_options["bones"]["visible"]
         self.state.set_view_option("bones", "visible", on)
-        self.status_label.setText("Bones shown" if on else "Bones hidden (Ctrl+H shows them)")
+        self.status_label.setText("Bones shown" if on else f"Bones hidden ({BONES_KEY_LABEL} shows them)")
 
     def playblast(self) -> None:
         """File > Playblast… (Ctrl+Shift+B): record the animation as the viewport frames it."""

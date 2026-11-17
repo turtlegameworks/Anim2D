@@ -18,6 +18,7 @@ from __future__ import annotations
 import io
 import math
 import struct
+from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -320,28 +321,30 @@ def _alpha_mask(alpha: Image.Image, threshold: int, dither: int) -> Image.Image:
     return below.point(lambda v: 0 if v > 0 else 255)
 
 
-def write_gif(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
+def gif_frame(img: Image.Image, s: MediaExport) -> Image.Image:
+    """One GIF frame: the image quantized to the palette (the last colour transparent when s.transparent)."""
     colors = max(2, min(256, int(s.colors)))
     q = max(1, min(10, int(s.quality)))
     method = Image.Quantize.FASTOCTREE if q <= 3 else Image.Quantize.MEDIANCUT
     dither = Image.Dither.FLOYDSTEINBERG if s.color_dither > 0 else Image.Dither.NONE
-    out = []
-    for img in frames:
-        if s.transparent:
-            alpha = img.getchannel("A")
-            opaque = _alpha_mask(alpha, s.alpha_threshold, s.alpha_dither)
-            if s.matte:
-                rgb = flatten(img, s.matte)
-            else:
-                rgb = img.convert("RGB")
-            pal = rgb.quantize(colors=colors - 1, method=method, kmeans=max(0, q - 7), dither=dither)
-            palette = pal.getpalette() or []
-            pal.putpalette(palette + [0] * (768 - len(palette)))
-            pal.paste(colors - 1, mask=ImageChops.invert(opaque))
+    if s.transparent:
+        alpha = img.getchannel("A")
+        opaque = _alpha_mask(alpha, s.alpha_threshold, s.alpha_dither)
+        if s.matte:
+            rgb = flatten(img, s.matte)
         else:
-            pal = flatten(img, s.background).quantize(colors=colors, method=method, kmeans=max(0, q - 7),
-                                                      dither=dither)
-        out.append(pal)
+            rgb = img.convert("RGB")
+        pal = rgb.quantize(colors=colors - 1, method=method, kmeans=max(0, q - 7), dither=dither)
+        palette = pal.getpalette() or []
+        pal.putpalette(palette + [0] * (768 - len(palette)))
+        pal.paste(colors - 1, mask=ImageChops.invert(opaque))
+        return pal
+    return flatten(img, s.background).quantize(colors=colors, method=method, kmeans=max(0, q - 7), dither=dither)
+
+
+def save_gif(out: list[Image.Image], path: Path, s: MediaExport) -> None:
+    """Write frames already made by gif_frame."""
+    colors = max(2, min(256, int(s.colors)))
     options = {"save_all": True, "append_images": out[1:], "duration": _durations(len(out), s.fps, s.pause_after),
                "disposal": 2, "optimize": False}
     if s.forever:
@@ -349,6 +352,10 @@ def write_gif(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
     if s.transparent:
         options["transparency"] = colors - 1
     out[0].save(path, **options)
+
+
+def write_gif(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
+    save_gif([gif_frame(img, s) for img in frames], path, s)
 
 
 def write_apng(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
@@ -420,45 +427,94 @@ def _list(kind: bytes, data: bytes) -> bytes:
     return b"LIST" + struct.pack("<I", len(data) + 4) + kind + data
 
 
+def avi_payload(img: Image.Image, s: MediaExport) -> bytes:
+    """One AVI frame: Motion JPEG, or uncompressed bottom-up BGRA ('raw' encoding)."""
+    if s.encoding == "raw":
+        src = img if s.transparent else flatten(img, s.background).convert("RGBA")
+        return src.transpose(Image.Transpose.FLIP_TOP_BOTTOM).tobytes("raw", "BGRA")
+    buf = io.BytesIO()
+    flatten(img, s.background).save(buf, "JPEG", quality=max(1, min(100, s.jpeg_quality)))
+    return buf.getvalue()
+
+
+def _discard(file, path: Path) -> None:
+    """Close and remove a half-written file. Called while another error is on its way out, so
+    neither step may raise: closing can fail again (flushing to a full disk), and the file is
+    removed either way."""
+    with suppress(OSError):
+        file.close()
+    with suppress(OSError):
+        path.unlink(missing_ok=True)
+
+
+class AviWriter:
+    """Writes an AVI frame by frame: each payload goes to the file as it comes, and the headers and
+    index are filled in by close(). Only the frame sizes stay in memory."""
+
+    def __init__(self, path: Path, width: int, height: int, s: MediaExport):
+        self.path, self.width, self.height, self.s = Path(path), width, height, s
+        self.raw = s.encoding == "raw"
+        self.fourcc = b"00db" if self.raw else b"00dc"
+        self.sizes: list[int] = []
+        self.last = b""
+        self.file = open(self.path, "wb")
+        self.file.write(b"\0" * len(self._head(0, 0, 0)))  # the real headers are written by close()
+        self.movi = 0  # bytes of frame chunks after the movi list's "movi" tag
+
+    def _head(self, count: int, biggest: int, movi: int) -> bytes:
+        s, width, height, raw = self.s, self.width, self.height, self.raw
+        rate, scale = round(s.fps * 1000), 1000
+        avih = struct.pack("<IIIIIIIIII4I", round(1_000_000 / s.fps), int(biggest * s.fps), 0, 0x10, count, 0, 1,
+                           biggest, width, height, 0, 0, 0, 0)
+        handler = b"\0\0\0\0" if raw else b"MJPG"
+        strh = (b"vids" + handler + struct.pack("<IHHIIIIIIiI", 0, 0, 0, 0, scale, rate, 0, count, biggest, -1, 0)
+                + struct.pack("<hhhh", 0, 0, width, height))
+        strf = struct.pack("<IiiHHIIiiII", 40, width, height, 1, 32 if raw else 24, 0 if raw else 0x47504A4D,
+                           width * height * (4 if raw else 3), 0, 0, 0, 0)
+        hdrl = _list(b"hdrl", _chunk(b"avih", avih) + _list(b"strl", _chunk(b"strh", strh) + _chunk(b"strf", strf)))
+        index = 16 * count + 8
+        body = 4 + len(hdrl) + 12 + movi + index
+        return b"RIFF" + struct.pack("<I", body) + b"AVI " + hdrl + b"LIST" + struct.pack("<I", movi + 4) + b"movi"
+
+    def add(self, payload: bytes) -> None:
+        block = _chunk(self.fourcc, payload)
+        self.file.write(block)
+        self.sizes.append(len(payload))
+        self.movi += len(block)
+        self.last = payload
+        if 1024 + self.movi + 16 * len(self.sizes) > 0xFFFFFFF0:
+            self.abort()
+            raise EditorError("The AVI would be larger than 4 GB; lower the size or the frame count")
+
+    def close(self, hold: int = 0) -> None:
+        """Repeat the last frame `hold` times, then write the index and the headers."""
+        for _ in range(hold):
+            self.add(self.last)
+        index, offset = io.BytesIO(), 4
+        for size in self.sizes:
+            index.write(self.fourcc + struct.pack("<III", 0x10, offset, size))
+            offset += 8 + size + size % 2
+        self.file.write(_chunk(b"idx1", index.getvalue()))
+        self.file.seek(0)
+        self.file.write(self._head(len(self.sizes), max(self.sizes, default=0), self.movi))
+        self.file.close()
+
+    def abort(self) -> None:
+        _discard(self.file, self.path)
+
+
 def write_avi(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
     """AVI: Motion JPEG ('mjpeg') or uncompressed 32-bit BGRA ('raw', keeps alpha)."""
-    raw = s.encoding == "raw"
-    if not raw:
+    if s.encoding != "raw":
         frames = _even(frames, s.background)
-    width, height = frames[0].size
-    payloads = []
-    for img in frames:
-        if raw:
-            src = img if s.transparent else flatten(img, s.background).convert("RGBA")
-            payloads.append(src.transpose(Image.Transpose.FLIP_TOP_BOTTOM).tobytes("raw", "BGRA"))
-        else:
-            buf = io.BytesIO()
-            flatten(img, s.background).save(buf, "JPEG", quality=max(1, min(100, s.jpeg_quality)))
-            payloads.append(buf.getvalue())
-    hold = max(0, round(s.pause_after * s.fps))
-    payloads += [payloads[-1]] * hold
-    count = len(payloads)
-    rate, scale = round(s.fps * 1000), 1000
-    biggest = max(len(p) for p in payloads)
-    avih = struct.pack("<IIIIIIIIII4I", round(1_000_000 / s.fps), int(biggest * s.fps), 0, 0x10, count, 0, 1,
-                       biggest, width, height, 0, 0, 0, 0)
-    handler = b"\0\0\0\0" if raw else b"MJPG"
-    strh = (b"vids" + handler + struct.pack("<IHHIIIIIIiI", 0, 0, 0, 0, scale, rate, 0, count, biggest, -1, 0)
-            + struct.pack("<hhhh", 0, 0, width, height))
-    strf = struct.pack("<IiiHHIIiiII", 40, width, height, 1, 32 if raw else 24, 0 if raw else 0x47504A4D,
-                       width * height * (4 if raw else 3), 0, 0, 0, 0)
-    hdrl = _list(b"hdrl", _chunk(b"avih", avih) + _list(b"strl", _chunk(b"strh", strh) + _chunk(b"strf", strf)))
-    fourcc = b"00db" if raw else b"00dc"
-    movi, index, offset = io.BytesIO(), io.BytesIO(), 4
-    for p in payloads:
-        block = _chunk(fourcc, p)
-        movi.write(block)
-        index.write(fourcc + struct.pack("<III", 0x10, offset, len(p)))
-        offset += len(block)
-    body = b"AVI " + hdrl + _list(b"movi", movi.getvalue()) + _chunk(b"idx1", index.getvalue())
-    if len(body) > 0xFFFFFFF0:
-        raise EditorError("The AVI would be larger than 4 GB; lower the size or the frame count")
-    Path(path).write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+    writer = AviWriter(path, *frames[0].size, s)
+    try:
+        for img in frames:
+            writer.add(avi_payload(img, s))
+        writer.close(max(0, round(s.pause_after * s.fps)))
+    except BaseException:  # also when finishing the file fails (a full disk): no half-written file stays
+        writer.abort()
+        raise
 
 
 def _atom(kind: bytes, *parts: bytes) -> bytes:
@@ -466,64 +522,95 @@ def _atom(kind: bytes, *parts: bytes) -> bytes:
     return struct.pack(">I", len(data) + 8) + kind + data
 
 
+def mov_sample(img: Image.Image, s: MediaExport) -> bytes:
+    """One MOV frame: PNG (keeps alpha) or Photo-JPEG."""
+    buf = io.BytesIO()
+    if s.encoding != "jpeg":
+        src = img if s.transparent else flatten(img, s.background).convert("RGBA")
+        src.save(buf, "PNG", compress_level=max(0, min(9, s.compression)))
+    else:
+        flatten(img, s.background).save(buf, "JPEG", quality=max(1, min(100, s.jpeg_quality)))
+    return buf.getvalue()
+
+
+class MovWriter:
+    """Writes a QuickTime MOV frame by frame: samples go into the mdat atom as they come, and the
+    moov atom (sizes and offsets) is written by close(). Only the sample sizes stay in memory."""
+
+    def __init__(self, path: Path, width: int, height: int, s: MediaExport):
+        self.path, self.width, self.height, self.s = Path(path), width, height, s
+        self.png = s.encoding != "jpeg"
+        self.sizes: list[int] = []
+        self.last = b""
+        self.ftyp = _atom(b"ftyp", b"qt  ", struct.pack(">I", 0x200), b"qt  ")
+        self.file = open(self.path, "wb")
+        self.file.write(self.ftyp + b"\0\0\0\0mdat")  # the mdat size is written by close()
+        self.data = 0
+
+    def add(self, sample: bytes) -> None:
+        self.file.write(sample)
+        self.sizes.append(len(sample))
+        self.data += len(sample)
+        self.last = sample
+        if self.data > 0xFFFFFFF0:
+            self.abort()
+            raise EditorError("The MOV would be larger than 4 GB; lower the size or the frame count")
+
+    def close(self, hold: int = 0) -> None:
+        for _ in range(hold):
+            self.add(self.last)
+        s, width, height, png, samples = self.s, self.width, self.height, self.png, self.sizes
+        timescale, step = round(s.fps * 1000), 1000
+        duration = len(samples) * step
+        be = struct.pack
+        matrix = be(">9I", 0x10000, 0, 0, 0, 0x10000, 0, 0, 0, 0x40000000)
+        chunk_offset = len(self.ftyp) + 8
+        mvhd = _atom(b"mvhd", be(">IIIII", 0, 0, 0, timescale, duration), be(">IH", 0x10000, 0x100), b"\0" * 10,
+                     matrix, b"\0" * 24, be(">I", 2))
+        tkhd = _atom(b"tkhd", be(">IIIIII", 3, 0, 0, 1, 0, duration), b"\0" * 8, be(">hhhh", 0, 0, 0, 0), matrix,
+                     be(">II", width << 16, height << 16))
+        mdhd = _atom(b"mdhd", be(">IIIIIHH", 0, 0, 0, timescale, duration, 0, 0))
+        name = b"Video Media Handler"
+        hdlr = _atom(b"hdlr", be(">I", 0), b"mhlr", b"vide", be(">III", 0, 0, 0), bytes([len(name)]) + name)
+        vmhd = _atom(b"vmhd", be(">IHHHH", 1, 0x40 if png and s.transparent else 0, 0x8000, 0x8000, 0x8000))
+        dname = b"Data Handler"
+        dhlr = _atom(b"hdlr", be(">I", 0), b"dhlr", b"alis", be(">III", 0, 0, 0), bytes([len(dname)]) + dname)
+        dinf = _atom(b"dinf", _atom(b"dref", be(">II", 0, 1), _atom(b"alis", be(">I", 1))))
+        codec = b"png " if png else b"jpeg"
+        compressor = b"PNG" if png else b"Photo - JPEG"
+        entry = (codec + b"\0" * 6 + be(">H", 1) + be(">HH", 0, 0) + b"appl" + be(">II", 0, 1023 if not png else 0)
+                 + be(">HH", width, height) + be(">II", 0x480000, 0x480000) + be(">IH", 0, 1)
+                 + bytes([len(compressor)]) + compressor + b"\0" * (31 - len(compressor))
+                 + be(">hh", 32 if png else 24, -1))
+        stsd = _atom(b"stsd", be(">II", 0, 1), be(">I", len(entry) + 4) + entry)
+        stts = _atom(b"stts", be(">III", 0, 1, len(samples)) + be(">I", step))
+        stsc = _atom(b"stsc", be(">IIIII", 0, 1, 1, len(samples), 1))
+        stsz = _atom(b"stsz", be(">III", 0, 0, len(samples)), b"".join(be(">I", x) for x in samples))
+        stco = _atom(b"stco", be(">III", 0, 1, chunk_offset))
+        stbl = _atom(b"stbl", stsd, stts, stsc, stsz, stco)
+        minf = _atom(b"minf", vmhd, dhlr, dinf, stbl)
+        mdia = _atom(b"mdia", mdhd, hdlr, minf)
+        self.file.write(_atom(b"moov", mvhd, _atom(b"trak", tkhd, mdia)))
+        self.file.seek(len(self.ftyp))
+        self.file.write(be(">I", self.data + 8))
+        self.file.close()
+
+    def abort(self) -> None:
+        _discard(self.file, self.path)
+
+
 def write_mov(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
     """QuickTime MOV, PNG (keeps alpha) or Photo-JPEG frames."""
-    png = s.encoding != "jpeg"
-    if not png:
+    if s.encoding == "jpeg":
         frames = _even(frames, s.background)
-    width, height = frames[0].size
-    samples = []
-    for img in frames:
-        buf = io.BytesIO()
-        if png:
-            src = img if s.transparent else flatten(img, s.background).convert("RGBA")
-            src.save(buf, "PNG", compress_level=max(0, min(9, s.compression)))
-        else:
-            flatten(img, s.background).save(buf, "JPEG", quality=max(1, min(100, s.jpeg_quality)))
-        samples.append(buf.getvalue())
-    hold = max(0, round(s.pause_after * s.fps))
-    samples += [samples[-1]] * hold
-    timescale, step = round(s.fps * 1000), 1000
-    duration = len(samples) * step
-    be = struct.pack
-    matrix = be(">9I", 0x10000, 0, 0, 0, 0x10000, 0, 0, 0, 0x40000000)
-    ftyp = _atom(b"ftyp", b"qt  ", be(">I", 0x200), b"qt  ")
-    mdat_header = 8
-    mdat_data = b"".join(samples)
-    if len(mdat_data) > 0xFFFFFFF0:
-        raise EditorError("The MOV would be larger than 4 GB; lower the size or the frame count")
-    chunk_offset = len(ftyp) + mdat_header
-    mvhd = _atom(b"mvhd", be(">IIIII", 0, 0, 0, timescale, duration), be(">IH", 0x10000, 0x100), b"\0" * 10,
-                 matrix, b"\0" * 24, be(">I", 2))
-    tkhd = _atom(b"tkhd", be(">IIIIII", 3, 0, 0, 1, 0, duration), b"\0" * 8, be(">hhhh", 0, 0, 0, 0), matrix,
-                 be(">II", width << 16, height << 16))
-    mdhd = _atom(b"mdhd", be(">IIIIIHH", 0, 0, 0, timescale, duration, 0, 0))
-    name = b"Video Media Handler"
-    hdlr = _atom(b"hdlr", be(">I", 0), b"mhlr", b"vide", be(">III", 0, 0, 0), bytes([len(name)]) + name)
-    vmhd = _atom(b"vmhd", be(">IHHHH", 1, 0x40 if png and s.transparent else 0, 0x8000, 0x8000, 0x8000))
-    dname = b"Data Handler"
-    dhlr = _atom(b"hdlr", be(">I", 0), b"dhlr", b"alis", be(">III", 0, 0, 0), bytes([len(dname)]) + dname)
-    dinf = _atom(b"dinf", _atom(b"dref", be(">II", 0, 1), _atom(b"alis", be(">I", 1))))
-    codec = b"png " if png else b"jpeg"
-    compressor = b"PNG" if png else b"Photo - JPEG"
-    entry = (codec + b"\0" * 6 + be(">H", 1) + be(">HH", 0, 0) + b"appl" + be(">II", 0, 1023 if not png else 0)
-             + be(">HH", width, height) + be(">II", 0x480000, 0x480000) + be(">IH", 0, 1)
-             + bytes([len(compressor)]) + compressor + b"\0" * (31 - len(compressor))
-             + be(">hh", 32 if png else 24, -1))
-    stsd = _atom(b"stsd", be(">II", 0, 1), be(">I", len(entry) + 4) + entry)
-    stts = _atom(b"stts", be(">III", 0, 1, len(samples)) + be(">I", step))
-    stsc = _atom(b"stsc", be(">IIIII", 0, 1, 1, len(samples), 1))
-    stsz = _atom(b"stsz", be(">III", 0, 0, len(samples)), b"".join(be(">I", len(x)) for x in samples))
-    stco = _atom(b"stco", be(">III", 0, 1, chunk_offset))
-    stbl = _atom(b"stbl", stsd, stts, stsc, stsz, stco)
-    minf = _atom(b"minf", vmhd, dhlr, dinf, stbl)
-    mdia = _atom(b"mdia", mdhd, hdlr, minf)
-    moov = _atom(b"moov", mvhd, _atom(b"trak", tkhd, mdia))
-    with open(path, "wb") as f:
-        f.write(ftyp)
-        f.write(be(">I", len(mdat_data) + 8) + b"mdat")
-        f.write(mdat_data)
-        f.write(moov)
+    writer = MovWriter(path, *frames[0].size, s)
+    try:
+        for img in frames:
+            writer.add(mov_sample(img, s))
+        writer.close(max(0, round(s.pause_after * s.fps)))
+    except BaseException:  # also when finishing the file fails (a full disk): no half-written file stays
+        writer.abort()
+        raise
 
 
 def write_mp4(frames: list[Image.Image], path: Path, s: MediaExport) -> None:

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from typing import Iterable
 
 from PIL import Image
 from PySide6.QtCore import QEventLoop, QSize, QTimer, QUrl
@@ -75,12 +76,21 @@ def write_apng(frames: list[QImage], path: Path, fps: float, loop: bool = True) 
                    loop=0 if loop else 1, disposal=1)
 
 
-def write_mp4(frames: list[QImage], path: Path, fps: float, timeout: float = 120.0) -> None:
-    """H.264 MP4 through Qt Multimedia (frames must be opaque; their size is rounded to even)."""
+def write_mp4(frames: Iterable[QImage], path: Path, fps: float, timeout: float = 120.0) -> None:
+    """H.264 MP4 through Qt Multimedia (frames must be opaque; their size is rounded to even).
+    Frames are taken one at a time as the encoder asks for them, so a generator that paints each
+    frame keeps only a frame or two in memory. timeout: seconds without the encoder taking a frame
+    (or finishing) before giving up."""
     from PySide6.QtMultimedia import (QMediaCaptureSession, QMediaFormat, QMediaRecorder, QVideoFrame,
                                       QVideoFrameFormat, QVideoFrameInput)
-    width, height = frames[0].width() // 2 * 2, frames[0].height() // 2 * 2
-    images = [f.copy(0, 0, width, height).convertToFormat(QImage.Format.Format_RGBX8888) for f in frames]
+    source_frames = iter(frames)
+    first = next(source_frames, None)
+    if first is None:
+        raise EditorError("Nothing to record")
+    width, height = first.width() // 2 * 2, first.height() // 2 * 2
+
+    def prepared(image: QImage) -> QImage:
+        return image.copy(0, 0, width, height).convertToFormat(QImage.Format.Format_RGBX8888)
     frame_format = QVideoFrameFormat(QSize(width, height), QVideoFrameFormat.PixelFormat.Format_RGBX8888)
     frame_format.setStreamFrameRate(fps)
     source = QVideoFrameInput(frame_format)
@@ -96,18 +106,36 @@ def write_mp4(frames: list[QImage], path: Path, fps: float, timeout: float = 120
     recorder.setQuality(QMediaRecorder.Quality.VeryHighQuality)
     recorder.setOutputLocation(QUrl.fromLocalFile(str(Path(path).resolve())))
     loop = QEventLoop()
-    state = {"next": 0, "error": None, "stopping": False}
+    state = {"sent": 0, "pending": prepared(first), "error": None, "stopping": False, "failure": None,
+             "busy": False}
     step = 1_000_000 / fps  # microseconds
+    watchdog = QTimer()
+    watchdog.setSingleShot(True)
+    watchdog.setInterval(int(timeout * 1000))
+    watchdog.timeout.connect(loop.quit)
 
     def send() -> None:
-        while state["next"] < len(images):
-            i = state["next"]
-            frame = QVideoFrame(images[i])
-            frame.setStartTime(int(i * step))
-            frame.setEndTime(int((i + 1) * step))
-            if not source.sendVideoFrame(frame):
-                return  # the recorder is busy: readyToSendVideoFrame calls again
-            state["next"] += 1
+        if state["busy"]:  # re-entered from processEvents() while a frame paints: the outer call keeps sending
+            return
+        state["busy"] = True
+        try:
+            while state["pending"] is not None:
+                i = state["sent"]
+                frame = QVideoFrame(state["pending"])
+                frame.setStartTime(int(i * step))
+                frame.setEndTime(int((i + 1) * step))
+                if not source.sendVideoFrame(frame):
+                    return  # the recorder is busy: readyToSendVideoFrame calls again
+                state["sent"] += 1
+                watchdog.start()
+                following = next(source_frames, None)
+                state["pending"] = prepared(following) if following is not None else None
+        except BaseException as exc:  # a frame failed to paint (or the playblast was cancelled)
+            state["failure"] = exc
+            loop.quit()
+            return
+        finally:
+            state["busy"] = False
         if not state["stopping"]:
             state["stopping"] = True
             recorder.stop()
@@ -120,17 +148,37 @@ def write_mp4(frames: list[QImage], path: Path, fps: float, timeout: float = 120
         state["error"] = text or str(error)
         loop.quit()
 
+    def stop_and_wait() -> None:
+        """Stop recording and wait until the recorder has let go of the file, so a failed export's
+        partial file can be removed (Windows keeps a file that is still open)."""
+        state["pending"] = None  # send() submits nothing more
+        state["stopping"] = True
+        stopped = QMediaRecorder.RecorderState.StoppedState
+        if recorder.recorderState() == stopped:
+            return
+        waiter = QEventLoop()
+        recorder.recorderStateChanged.connect(lambda new: waiter.quit() if new == stopped else None)
+        QTimer.singleShot(int(timeout * 1000), waiter.quit)
+        recorder.stop()
+        if recorder.recorderState() != stopped:
+            waiter.exec()
+
     source.readyToSendVideoFrame.connect(send)
     recorder.recorderStateChanged.connect(on_state)
     recorder.errorOccurred.connect(on_error)
-    QTimer.singleShot(int(timeout * 1000), loop.quit)
     recorder.record()
+    watchdog.start()
     QTimer.singleShot(0, send)
     loop.exec()
+    watchdog.stop()
+    if state["failure"] is not None:
+        stop_and_wait()
+        raise state["failure"]
     if state["error"]:
+        stop_and_wait()
         raise EditorError(f"Video export failed: {state['error']}")
-    if state["next"] < len(images) or recorder.recorderState() != QMediaRecorder.RecorderState.StoppedState:
-        recorder.stop()
+    if state["pending"] is not None or recorder.recorderState() != QMediaRecorder.RecorderState.StoppedState:
+        stop_and_wait()
         raise EditorError("Video export did not finish (the video encoder did not accept the frames)")
     if not Path(path).is_file() or Path(path).stat().st_size == 0:
         raise EditorError("Video export wrote no file; this system may lack an H.264 encoder")

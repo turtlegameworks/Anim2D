@@ -148,7 +148,8 @@ class PlayblastDialog(QDialog):
 
         for signal in (self.animation.currentTextChanged, self.format.currentIndexChanged,
                        self.scale.currentIndexChanged, self.name.textChanged, self.folder.edit.textChanged,
-                       self.whole.toggled, self.start.valueChanged, self.end.valueChanged, self.fps.valueChanged):
+                       self.whole.toggled, self.start.valueChanged, self.end.valueChanged, self.fps.valueChanged,
+                       self.repeat.valueChanged):
             signal.connect(self._refresh)
         self.animation.currentTextChanged.connect(self._animation_changed)
         if saved.range != "custom" or not saved.end:
@@ -205,7 +206,12 @@ class PlayblastDialog(QDialog):
             path = pb.output_path(s, name)
             if not pb.FORMATS[s.format][2]:
                 path = path.with_name(f"{path.stem}_0000{path.suffix}  …")
-            self.path_label.setText(f"Saves {path}")
+            note = ""
+            need = pb.memory_needed(self.viewport.state.doc, s.animation, s, self.viewport)
+            if need > 1 << 30:
+                note = (f"\n{pb.FORMATS[s.format][0]} keeps every frame in memory (about {need / (1 << 30):.1f} GB "
+                        "here): for long or large playblasts, MP4, MOV or AVI write each frame as it comes.")
+            self.path_label.setText(f"Saves {path}{note}")
         except EditorError as exc:
             self.path_label.setText(str(exc))
         self.run_button.setEnabled(bool(s.animation))

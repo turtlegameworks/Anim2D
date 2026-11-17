@@ -3,6 +3,38 @@
 All notable changes to Anim2D. Versions follow [semantic versioning](https://semver.org/). Before 1.0,
 minor versions may change file formats, but older files keep opening.
 
+## 0.20.0 (unreleased)
+
+Export for Spine 4.1, 4.2 and 4.3 runtimes, Playblast, and working on several bones at once.
+
+### Added
+
+* **Playblast** (File → Playblast…, Ctrl+Shift+B): records an animation as the viewport frames it, without tools
+  or selection, to MP4, MOV, AVI, GIF, WebP, APNG or a PNG or JPEG sequence, with optional bones, grid and a
+  frame-number HUD. Frames are encoded on worker threads while the next one paints, and MP4, MOV, AVI and image
+  sequences are written as they come, so memory stays flat for any length. Cancelling removes what was written.
+* **Several bones at once:** Ctrl+click bones in the viewport or the Tree to select several. Translate, rotate,
+  scale and shear drags, keying (K) and Delete act on all of them.
+* **Show / hide bones** (View → Show bones, Ctrl+H; Control+H on a Mac) and a 🦴 Bones button on the mode bar.
+* **Steam Rise** preset: soft puffs of steam that rise, swell, curl and fade, in a seamless loop.
+
+* **Export for Spine 4.3, 4.2 and 4.1.** **File → Export** (Version), **Export for game engine** and the **Unity
+  Bridge** write JSON in the layout of each version, for runtimes such as spine-unity 4.3. The Unity Bridge picks
+  the version of the spine-unity it finds in the project. The data is the same as the 4.0 export: Esoteric's
+  example rigs exported for 4.1, 4.2 and 4.3 pose the same in the official runtimes of those versions as the 4.0
+  export does in 4.0. Binary (`.skel`) stays 4.0 only.
+* Spine changed some runtime math in 4.2 and 4.3, which no data can undo. The export names each constraint
+  that depends on it: world transform constraints whose shear a later constraint reads back (4.2+), local
+  transform constraints that mix rotation or shear partway (4.2+), and local transform constraints that mix
+  scale into scaled bones (4.3).
+
+### Changed
+
+* MP4 export (File → Export and Playblast) gives up after two minutes without progress instead of after two
+  minutes in all, so long videos finish.
+* The note that physics is not exported, and the physics window, now say that no Spine runtime plays Anim2D's
+  physics (bake it to keys), not only 3.8 and 4.0.
+
 ## 0.19.0 (unreleased)
 
 A particle emitter for the FX Builder, and a new logo.

@@ -34,7 +34,7 @@ class PhysicsDialog(QDialog):
             spin.setToolTip(tip)
             form.addRow(label, spin)
             self.spins[key] = spin
-        info = QLabel("Spine 3.8/4.0 runtimes have no physics: bake it to keys (Edit > Bake physics to keys) "
+        info = QLabel("Spine runtimes don't play Anim2D's physics: bake it to keys (Edit > Bake physics to keys) "
                       "before exporting. The Preview shows it live.")
         info.setWordWrap(True)
         info.setStyleSheet("color: #a9a9a9;")
