@@ -275,6 +275,33 @@ def test_a_writer_that_fails_to_finish_leaves_no_file(tmp_path, monkeypatch, kin
     assert not out.exists()
 
 
+@pytest.mark.parametrize("kind", ["avi", "mov"])
+def test_aborting_removes_the_file_even_when_closing_fails(tmp_path, kind):
+    """A write that keeps failing (a full disk) also fails when abort() closes the file: the file
+    is still removed, and abort() raises nothing over the error that caused it."""
+    from anim2d.editor import media_export as mx
+    out = tmp_path / f"clip.{kind}"
+    writer = (mx.AviWriter if kind == "avi" else mx.MovWriter)(out, 8, 6, mx.MediaExport(kind=kind, fps=10))
+    writer.add(b"frame")
+    real = writer.file
+
+    class Full:
+        def write(self, data):
+            raise OSError(28, "No space left on device")
+
+        def seek(self, *args):
+            raise OSError(28, "No space left on device")
+
+        def close(self):
+            real.close()  # the descriptor goes, but flushing what is buffered fails
+            raise OSError(28, "No space left on device")
+    writer.file = Full()
+    with pytest.raises(OSError):
+        writer.close()
+    writer.abort()
+    assert not out.exists()
+
+
 def test_filesystem_failures_are_editor_errors(win, tmp_path, monkeypatch):
     blocker = tmp_path / "file"
     blocker.write_text("not a folder")

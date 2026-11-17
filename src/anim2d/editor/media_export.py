@@ -18,6 +18,7 @@ from __future__ import annotations
 import io
 import math
 import struct
+from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -436,6 +437,16 @@ def avi_payload(img: Image.Image, s: MediaExport) -> bytes:
     return buf.getvalue()
 
 
+def _discard(file, path: Path) -> None:
+    """Close and remove a half-written file. Called while another error is on its way out, so
+    neither step may raise: closing can fail again (flushing to a full disk), and the file is
+    removed either way."""
+    with suppress(OSError):
+        file.close()
+    with suppress(OSError):
+        path.unlink(missing_ok=True)
+
+
 class AviWriter:
     """Writes an AVI frame by frame: each payload goes to the file as it comes, and the headers and
     index are filled in by close(). Only the frame sizes stay in memory."""
@@ -489,8 +500,7 @@ class AviWriter:
         self.file.close()
 
     def abort(self) -> None:
-        self.file.close()
-        self.path.unlink(missing_ok=True)
+        _discard(self.file, self.path)
 
 
 def write_avi(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
@@ -586,8 +596,7 @@ class MovWriter:
         self.file.close()
 
     def abort(self) -> None:
-        self.file.close()
-        self.path.unlink(missing_ok=True)
+        _discard(self.file, self.path)
 
 
 def write_mov(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
