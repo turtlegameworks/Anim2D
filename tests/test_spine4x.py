@@ -416,3 +416,49 @@ def test_the_local_mix_note_sees_mixes_between_keys():
     keys[0]["mixRotate"] = keys[1]["mixRotate"] = 2  # whole mixes turn by whole turns: the same
     keys[0]["curve"] = _curve((2, 2))
     assert spine4x.runtime_notes(data, spine4x.STAMP_42) == []
+
+
+def _scale_rig() -> dict:
+    """root > s (scaleX 2) and root > a (scale 1); 'copy' is local and absolute and mixes a's scale."""
+    return {
+        "skeleton": {"spine": "4.0.64"},
+        "bones": [{"name": "root"}, {"name": "s", "parent": "root", "scaleX": 2}, {"name": "a", "parent": "root"}],
+        "slots": [],
+        "transform": [{"name": "copy", "order": 1, "bones": ["a"], "target": "root", "local": True,
+                       "mixRotate": 0, "mixX": 0, "mixScaleX": 1, "mixShearY": 0}],
+        "skins": [{"name": "default", "attachments": {}}],
+        "animations": {"a": {}},
+    }
+
+
+def test_the_scale_note_counts_scale_set_by_an_earlier_constraint():
+    data = _scale_rig()
+    assert not any("own scale" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))  # a is unscaled
+    data["transform"].insert(0, {"name": "grow", "order": 0, "bones": ["a"], "target": "s", "local": True,
+                                 "relative": True, "mixRotate": 0, "mixX": 0, "mixScaleX": 1, "mixShearY": 0})
+    notes = spine4x.runtime_notes(data, spine4x.STAMP_43)  # 'grow' scales a before 'copy' runs
+    assert any("'copy'" in n and "own scale" in n for n in notes)
+    data["transform"][0]["order"] = 2  # after 'copy': a still has scale 1 when 'copy' runs
+    assert not any("'copy'" in n and "own scale" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
+    data["transform"][0]["order"] = 0
+    data["transform"][0]["mixScaleX"] = 0  # 'grow' no longer scales
+    assert not any("own scale" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
+    data["ik"] = [{"name": "reach", "order": 0, "bones": ["a"], "target": "s", "stretch": True}]  # IK stretch scales
+    assert any("'copy'" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
+
+
+def test_the_scale_note_counts_scale_mixes_and_bone_scales_along_curves():
+    data = _scale_rig()
+    data["bones"][2]["scaleX"] = 2  # a is scaled
+    data["transform"][0]["mixScaleX"] = 0
+    data["animations"]["a"]["transform"] = {"copy": [
+        {"time": 0, "mixRotate": 0, "mixX": 0, "mixScaleX": 0, "mixShearY": 0,
+         "curve": [0.1, 0, 0.2, 0, 0.2, 0, 0.3, 0, 0.3, 0, 0.4, 0, 0.4, 1, 0.5, 1, 0.5, 0, 0.6, 0, 0.6, 0, 0.7, 0]},
+        {"time": 1, "mixRotate": 0, "mixX": 0, "mixScaleX": 0, "mixShearY": 0}]}  # only mixScaleX's handles rise
+    assert any("'copy'" in n and "own scale" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
+    assert "scaleX" in spine4x.upgrade(data, spine4x.STAMP_43)["constraints"][0]["properties"]
+    data["bones"][2].pop("scaleX")  # unscaled, but a scale key's curve leaves 1 between keys at 1
+    assert not any("own scale" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
+    data["animations"]["a"]["bones"] = {"a": {"scale": [{"time": 0, "curve": [0.3, 2, 0.6, 2, 0.3, 1, 0.6, 1]},
+                                                         {"time": 1}]}}
+    assert any("'copy'" in n and "own scale" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))

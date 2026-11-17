@@ -243,17 +243,36 @@ def test_frames_are_painted_as_they_are_written(win, tmp_path, monkeypatch):
     assert max(p - i for i, p in enumerate(written)) <= 2 * pb._workers() + 1
 
 
+def _skip_without_mp4() -> None:
+    from PySide6.QtMultimedia import QMediaFormat
+    encode = QMediaFormat.ConversionMode.Encode
+    if QMediaFormat.FileFormat.MPEG4 not in QMediaFormat().supportedFileFormats(encode) or \
+            not QMediaFormat(QMediaFormat.FileFormat.MPEG4).supportedVideoCodecs(encode):
+        pytest.skip("Qt Multimedia can't encode MP4 video on this system")  # asked, not guessed from an error
+
+
+def test_cancelling_an_mp4_playblast_leaves_no_file(win, tmp_path, qapp):
+    """The recorder is stopped and waited for before the partial MP4 is removed (on Windows an
+    open file can't be removed)."""
+    _skip_without_mp4()
+
+    def progress(done, total):
+        qapp.processEvents()
+        return done < 4
+    s = pb.PlayblastSettings(format="mp4", folder=str(tmp_path), name="cut", animation="walk", scale=25, fps=30)
+    with pytest.raises(EditorError, match="cancelled"):
+        pb.playblast(win.viewport, s, progress)
+    assert list(tmp_path.iterdir()) == []
+    assert win.viewport.capture is None
+
+
 def test_mp4_playblast_streams_frames(win, tmp_path, qapp):
     """Like the dialog, the progress callback runs the event loop while frames paint, so the
     encoder's ready signal can arrive inside the frame generator: it must not send twice."""
     def progress(done, total):
         qapp.processEvents()
         return True
-    from PySide6.QtMultimedia import QMediaFormat
-    encode = QMediaFormat.ConversionMode.Encode
-    if QMediaFormat.FileFormat.MPEG4 not in QMediaFormat().supportedFileFormats(encode) or \
-            not QMediaFormat(QMediaFormat.FileFormat.MPEG4).supportedVideoCodecs(encode):
-        pytest.skip("Qt Multimedia can't encode MP4 video on this system")  # asked, not guessed from an error
+    _skip_without_mp4()
     s = pb.PlayblastSettings(format="mp4", folder=str(tmp_path), name="v", animation="walk", scale=25, fps=30)
     files = pb.playblast(win.viewport, s, progress)  # any failure fails the test
     assert files[0].is_file() and files[0].stat().st_size > 0

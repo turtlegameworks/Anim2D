@@ -148,6 +148,21 @@ def write_mp4(frames: Iterable[QImage], path: Path, fps: float, timeout: float =
         state["error"] = text or str(error)
         loop.quit()
 
+    def stop_and_wait() -> None:
+        """Stop recording and wait until the recorder has let go of the file, so a failed export's
+        partial file can be removed (Windows keeps a file that is still open)."""
+        state["pending"] = None  # send() submits nothing more
+        state["stopping"] = True
+        stopped = QMediaRecorder.RecorderState.StoppedState
+        if recorder.recorderState() == stopped:
+            return
+        waiter = QEventLoop()
+        recorder.recorderStateChanged.connect(lambda new: waiter.quit() if new == stopped else None)
+        QTimer.singleShot(int(timeout * 1000), waiter.quit)
+        recorder.stop()
+        if recorder.recorderState() != stopped:
+            waiter.exec()
+
     source.readyToSendVideoFrame.connect(send)
     recorder.recorderStateChanged.connect(on_state)
     recorder.errorOccurred.connect(on_error)
@@ -157,12 +172,13 @@ def write_mp4(frames: Iterable[QImage], path: Path, fps: float, timeout: float =
     loop.exec()
     watchdog.stop()
     if state["failure"] is not None:
-        recorder.stop()
+        stop_and_wait()
         raise state["failure"]
     if state["error"]:
+        stop_and_wait()
         raise EditorError(f"Video export failed: {state['error']}")
     if state["pending"] is not None or recorder.recorderState() != QMediaRecorder.RecorderState.StoppedState:
-        recorder.stop()
+        stop_and_wait()
         raise EditorError("Video export did not finish (the video encoder did not accept the frames)")
     if not Path(path).is_file() or Path(path).stat().st_size == 0:
         raise EditorError("Video export wrote no file; this system may lack an H.264 encoder")

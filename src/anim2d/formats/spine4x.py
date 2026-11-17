@@ -106,8 +106,7 @@ def _to_42(data: dict[str, Any]) -> None:
 def _transform_properties(data: dict[str, Any], c: dict[str, Any]) -> dict[str, Any]:
     """The 4.3 properties map for a 4.0 transform constraint: each property whose mix is ever
     other than 0 (in the setup pose, at a key or along a key's Bezier curve) drives itself one to one."""
-    return {prop: {"to": {prop: {}}} for prop, mix in _MIXES.items()
-            if any(_mixes(data, c, mix)) or any(h != 0 for h in _handles(data, c, mix))}
+    return {prop: {"to": {prop: {}}} for prop, mix in _MIXES.items() if _drives(data, c, mix)}
 
 
 def _to_43(data: dict[str, Any]) -> None:
@@ -220,15 +219,20 @@ def runtime_notes(data: dict[str, Any], stamp: str) -> list[str]:
         degrees apart.
     And from 4.3:
       * A local, absolute transform constraint sets the scale it mixes; 4.0 to 4.2 divided it by
-        the bone's own scale. That shows when it mixes scale into bones whose own scale is not 1.
+        the bone's own scale. That shows when it mixes scale (set, keyed or along a curve) into
+        bones whose own scale is not 1: set up, animated, or changed by an earlier constraint.
     """
     if minor(stamp) < 2:
         return []
     version = stamp[:3]
-    scaled = _scaled_bones(data)
+    scaled = _scaled_bones(data)  # grows, in update order, with the bones earlier constraints scale
+    transforms = {c["name"] for c in data.get("transform") or []}
     notes = []
-    for c in data.get("transform") or []:
-        if not c.get("local") or c.get("relative"):
+    for c in _in_update_order(data):
+        absolute_local = c["name"] in transforms and c.get("local") and not c.get("relative")
+        scales = set(c.get("bones", [])) if _can_scale(data, c, c["name"] in transforms) else set()
+        if not absolute_local:
+            scaled |= scales
             continue
         partway = sorted({name for mix, name in (("mixRotate", "rotate"), ("mixShearY", "shear"))
                           if _ever_fractional(data, c, mix)})
@@ -236,24 +240,51 @@ def runtime_notes(data: dict[str, Any], stamp: str) -> list[str]:
             notes.append(f"Transform constraint '{c['name']}' mixes {' and '.join(partway)} partway: Spine {version} "
                          "runtimes mix those angles without taking the shortest way round, so when they are more "
                          "than 180 degrees apart the pose there can differ from Anim2D's.")
-        if minor(stamp) >= 3 and scaled & set(c.get("bones", [])) and (
-                any(_mixes(data, c, "mixScaleX")) or any(_mixes(data, c, "mixScaleY"))):
+        if minor(stamp) >= 3 and scales and scaled & scales:
             notes.append(f"Transform constraint '{c['name']}' is local and mixes scale into bones with their own "
                          f"scale: Spine {version} runtimes set that scale, where 4.0 to 4.2 runtimes and Anim2D "
                          "divide it by the bone's own scale, so those bones are scaled differently there.")
+        scaled |= scales
     return notes + _shear_notes(data, version)
 
 
+def _in_update_order(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """IK, transform and path constraints in the order the 4.0 runtime applies them."""
+    ranked = []
+    for rank, kind in enumerate(_TYPES):
+        for index, c in enumerate(data.get(kind) or []):
+            ranked.append((c.get("order", 0), rank, index, c))
+    return [c for *_, c in sorted(ranked, key=lambda r: r[:3])]
+
+
+def _drives(data: dict[str, Any], c: dict[str, Any], mix: str) -> bool:
+    """Whether a transform constraint's mix is ever other than 0: set up, keyed or along a curve."""
+    return any(_mixes(data, c, mix)) or any(h != 0 for h in _handles(data, c, mix))
+
+
+def _can_scale(data: dict[str, Any], c: dict[str, Any], transform: bool) -> bool:
+    """Whether a constraint can change its bones' own scale: a transform constraint that mixes
+    scale, IK that stretches or compresses, a path constraint that scales its chain."""
+    if transform:
+        return _drives(data, c, "mixScaleX") or _drives(data, c, "mixScaleY")
+    return bool(c.get("stretch") or c.get("compress")) or c.get("rotateMode") == "chainScale"
+
+
 def _scaled_bones(data: dict[str, Any]) -> set[str]:
-    """Bones whose own scale is not always 1: set up or keyed otherwise."""
+    """Bones whose own scale is not always 1: set up, keyed or curved otherwise."""
     out = {b["name"] for b in data.get("bones", [])
            if float(b.get("scaleX", 1)) != 1 or float(b.get("scaleY", 1)) != 1}
     for anim in data.get("animations", {}).values():
         for name, timelines in anim.get("bones", {}).items():
             for kind, keys in timelines.items():
-                if kind == "scale" and any(float(k.get("x", 1)) != 1 or float(k.get("y", 1)) != 1 for k in keys):
-                    out.add(name)
-                elif kind in ("scalex", "scaley") and any(float(k.get("value", 1)) != 1 for k in keys):
+                if kind == "scale":
+                    values = [float(v) for k in keys for v in (k.get("x", 1), k.get("y", 1))]
+                elif kind in ("scalex", "scaley"):
+                    values = [float(k.get("value", 1)) for k in keys]
+                else:
+                    continue
+                handles = [float(h) for k in keys if isinstance(k.get("curve"), list) for h in k["curve"][1::2]]
+                if any(v != 1 for v in values + handles):  # a key, or a curve between keys, leaves 1
                     out.add(name)
     return out
 
