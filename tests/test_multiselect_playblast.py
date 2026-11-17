@@ -243,15 +243,79 @@ def test_frames_are_painted_as_they_are_written(win, tmp_path, monkeypatch):
     assert max(p - i for i, p in enumerate(written)) <= 2 * pb._workers() + 1
 
 
-def test_mp4_playblast_streams_frames(win, tmp_path):
-    s = pb.PlayblastSettings(format="mp4", folder=str(tmp_path), name="v", animation="walk", scale=25, fps=10)
+def test_mp4_playblast_streams_frames(win, tmp_path, qapp):
+    """Like the dialog, the progress callback runs the event loop while frames paint, so the
+    encoder's ready signal can arrive inside the frame generator: it must not send twice."""
+    def progress(done, total):
+        qapp.processEvents()
+        return True
+    s = pb.PlayblastSettings(format="mp4", folder=str(tmp_path), name="v", animation="walk", scale=25, fps=30)
     try:
-        files = pb.playblast(win.viewport, s)
+        files = pb.playblast(win.viewport, s, progress)
     except EditorError as exc:
-        if "encoder" in str(exc):
+        if "lack an H.264 encoder" in str(exc):  # only a system without one; a stall still fails
             pytest.skip(str(exc))
         raise
     assert files[0].is_file() and files[0].stat().st_size > 0
+
+
+@pytest.mark.parametrize("kind", ["avi", "mov"])
+def test_a_writer_that_fails_to_finish_leaves_no_file(tmp_path, monkeypatch, kind):
+    from anim2d.editor import media_export as mx
+    writer = mx.AviWriter if kind == "avi" else mx.MovWriter
+
+    def failing_close(self, hold=0):
+        self.file.write(b"partial")
+        raise OSError(28, "No space left on device")
+    monkeypatch.setattr(writer, "close", failing_close)
+    frames = [Image.new("RGBA", (8, 6), (255, 0, 0, 255))] * 3
+    out = tmp_path / f"clip.{kind}"
+    with pytest.raises(OSError):
+        getattr(mx, f"write_{kind}")(frames, out, mx.MediaExport(kind=kind, fps=10, encoding="mjpeg" if kind == "avi" else "png"))
+    assert not out.exists()
+
+
+def test_filesystem_failures_are_editor_errors(win, tmp_path, monkeypatch):
+    blocker = tmp_path / "file"
+    blocker.write_text("not a folder")
+    s = pb.PlayblastSettings(format="png", folder=str(blocker / "sub"), name="x", animation="walk", scale=25, fps=10)
+    with pytest.raises(EditorError, match="Cannot write the playblast"):
+        pb.playblast(win.viewport, s)
+
+    def full(*args):
+        raise OSError(28, "No space left on device")
+    monkeypatch.setattr(pb, "_save_frame", full)
+    s = pb.PlayblastSettings(format="png", folder=str(tmp_path / "out"), name="x", animation="walk", scale=25, fps=10)
+    with pytest.raises(EditorError, match="No space left"):
+        pb.playblast(win.viewport, s)
+    assert not any((tmp_path / "out").glob("*.png"))
+    assert win.viewport.capture is None
+
+
+def test_the_dialog_notes_follow_repeat_and_version(win, tmp_path):
+    from anim2d.editor.playblast_dialog import PlayblastDialog
+    dialog = PlayblastDialog(win.viewport, win, store=win.store)
+    dialog.format.setCurrentIndex(dialog.format.findData("apng"))
+    dialog.scale.setCurrentIndex(dialog.scale.findData(200))
+    dialog.repeat.setValue(1)
+    before = dialog.path_label.text()
+    dialog.repeat.setValue(50)
+    assert dialog.path_label.text() != before and "keeps every frame in memory" in dialog.path_label.text()
+
+    from anim2d.editor import unity_bridge
+    from anim2d.editor.unity_dialog import UnityDialog
+    project = tmp_path / "Unity"
+    (project / "Assets" / "Spine").mkdir(parents=True)
+    (project / "ProjectSettings").mkdir()
+    (project / "ProjectSettings" / "ProjectVersion.txt").write_text("m_EditorVersion: 2022.3")
+    (project / "Assets" / "Spine" / "version.txt").write_text("This Spine-Unity runtime works with data exported from Spine Editor version: 4.2.xx")
+    assert unity_bridge.detect_runtime(project) == "4.2"
+    unity = UnityDialog(win.doc, win)
+    unity.version.setCurrentText("4.0")
+    unity.project.setText(str(project))
+    assert "Choose spine-unity version 4.2" in unity.info.text()
+    unity.version.setCurrentText("4.2")
+    assert "Choose spine-unity version" not in unity.info.text()
 
 
 def test_memory_note_for_formats_that_keep_every_frame(win):

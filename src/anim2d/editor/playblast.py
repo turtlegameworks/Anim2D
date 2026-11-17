@@ -17,6 +17,7 @@ import subprocess
 import sys
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -228,12 +229,12 @@ def write(source: Iterator[QImage], path: Path, s: PlayblastSettings, fps: float
         for f in files:
             if f.exists():
                 raise EditorError(f"{f.name} already exists. Tick Overwrite or choose another name.")
-    path.parent.mkdir(parents=True, exist_ok=True)
     settings = _media_settings(s, fps)
     quality = settings.jpeg_quality
     fmt = s.format
     written: list[Path] = []
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
         if fmt == "mp4":
             from .video import write_mp4
             written.append(files[0])
@@ -257,10 +258,10 @@ def write(source: Iterator[QImage], path: Path, s: PlayblastSettings, fps: float
             encode = (lambda image: _jpeg(image, quality)) if fmt == "avi" else _mov_png
             try:
                 _pipeline(_chain(first, source), encode, writer.add)
-            except BaseException:
+                writer.close()
+            except BaseException:  # also when finishing the file fails: abort closes it before it is removed
                 writer.abort()
                 raise
-            writer.close()
         else:  # gif, webp, apng: Pillow writes these from all the frames, kept as compact as possible
             if fmt == "gif":
                 def encode(image: QImage) -> Image.Image:  # one byte a pixel
@@ -277,11 +278,14 @@ def write(source: Iterator[QImage], path: Path, s: PlayblastSettings, fps: float
                 mx.save_gif(out, files[0], settings)
             else:  # the frames are opaque already: nothing to flatten
                 (mx.write_webp if fmt == "webp" else mx.write_apng)(out, files[0], replace(settings, transparent=True))
-    except BaseException:
+    except BaseException as exc:
         if hasattr(source, "close"):
             source.close()
         for f in written:
-            f.unlink(missing_ok=True)
+            with suppress(OSError):
+                f.unlink(missing_ok=True)
+        if isinstance(exc, OSError):  # a full disk, a folder that can't be written…
+            raise EditorError(f"Cannot write the playblast to {path.parent}: {exc.strerror or exc}") from exc
         raise
     return written
 

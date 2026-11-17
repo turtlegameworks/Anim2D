@@ -54,11 +54,17 @@ def minor(stamp: str) -> int:
     return int(parts[1])
 
 
-def upgrade(data: dict[str, Any], stamp: str) -> dict[str, Any]:
-    """A copy of 4.0 layout data in the layout of the stamp's version (4.0 to 4.3), stamped with it."""
+def check(stamp: str) -> int:
+    """The minor version of a 4.x stamp Anim2D can export; ValueError for any other."""
     target = minor(stamp)
     if target > 3:
-        raise ValueError(f"Spine {stamp} is newer than Anim2D knows (4.0 to 4.3)")
+        raise ValueError(f"Spine {stamp} is newer than Anim2D can export (4.0 to 4.3)")
+    return target
+
+
+def upgrade(data: dict[str, Any], stamp: str) -> dict[str, Any]:
+    """A copy of 4.0 layout data in the layout of the stamp's version (4.0 to 4.3), stamped with it."""
+    target = check(stamp)
     out = copy.deepcopy(data)
     out.setdefault("skeleton", {})["spine"] = stamp
     if target >= 1:
@@ -98,9 +104,10 @@ def _to_42(data: dict[str, Any]) -> None:
 
 
 def _transform_properties(data: dict[str, Any], c: dict[str, Any]) -> dict[str, Any]:
-    """The 4.3 properties map for a 4.0 transform constraint: each property that has a mix other
-    than 0, in the setup pose or in any key, drives itself one to one."""
-    return {prop: {"to": {prop: {}}} for prop, mix in _MIXES.items() if any(_mixes(data, c, mix))}
+    """The 4.3 properties map for a 4.0 transform constraint: each property whose mix is ever
+    other than 0 (in the setup pose, at a key or along a key's Bezier curve) drives itself one to one."""
+    return {prop: {"to": {prop: {}}} for prop, mix in _MIXES.items()
+            if any(_mixes(data, c, mix)) or any(h != 0 for h in _handles(data, c, mix))}
 
 
 def _to_43(data: dict[str, Any]) -> None:
@@ -143,15 +150,59 @@ def _to_43(data: dict[str, Any]) -> None:
             att["source"] = att.pop("parent")
 
 
-def _mixes(data: dict[str, Any], c: dict[str, Any], mix: str) -> list[float]:
-    """A transform constraint's setup mix and every keyed value of it, with 4.0's defaults: 1, but
-    mixY takes mixX's value and mixScaleY mixScaleX's."""
+def _mix(values: dict[str, Any], mix: str) -> float:
+    """A mix in a transform constraint or key, with 4.0's defaults: 1, but mixY takes mixX's value
+    and mixScaleY mixScaleX's."""
     fallback = {"mixY": "mixX", "mixScaleY": "mixScaleX"}.get(mix)
+    return float(values.get(mix, values.get(fallback, 1) if fallback else 1))
 
-    def value(values: dict[str, Any]) -> float:
-        return float(values.get(mix, values.get(fallback, 1) if fallback else 1))
-    return [value(c)] + [value(k) for anim in data.get("animations", {}).values()
-                         for k in anim.get("transform", {}).get(c["name"], [])]
+
+def _mixes(data: dict[str, Any], c: dict[str, Any], mix: str) -> list[float]:
+    """A transform constraint's setup mix and every keyed value of it."""
+    return [_mix(c, mix)] + [_mix(k, mix) for anim in data.get("animations", {}).values()
+                             for k in anim.get("transform", {}).get(c["name"], [])]
+
+
+_CHANNELS = list(_MIXES.values())  # the order of a 4.0 transform key's curve channels
+
+
+def _keys(data: dict[str, Any], c: dict[str, Any]):
+    for anim in data.get("animations", {}).values():
+        yield anim.get("transform", {}).get(c["name"], [])
+
+
+def _handles(data: dict[str, Any], c: dict[str, Any], mix: str) -> list[float]:
+    """The mix's Bezier handle values (cy1, cy2) in every key's curve: the curve can leave the
+    values at its keys."""
+    i = _CHANNELS.index(mix)
+    out = []
+    for keys in _keys(data, c):
+        for key in keys:
+            curve = key.get("curve")
+            if isinstance(curve, list) and len(curve) >= 4 * i + 4:
+                out += [float(curve[4 * i + 1]), float(curve[4 * i + 3])]
+    return out
+
+
+def _ever_fractional(data: dict[str, Any], c: dict[str, Any], mix: str) -> bool:
+    """Whether the mix is ever other than a whole number: in the setup pose, at a key, or between
+    keys (a curve between different values passes through the fractions, and a Bezier curve whose
+    handles leave its keys' value does too). Whole mixes turn by whole turns, which looks the same."""
+    if any(m != int(m) for m in _mixes(data, c, mix)):
+        return True
+    i = _CHANNELS.index(mix)
+    for keys in _keys(data, c):
+        values = [_mix(k, mix) for k in keys]
+        for key, start, end in zip(keys, values, values[1:]):
+            curve = key.get("curve")
+            if curve == "stepped":
+                continue
+            if start != end:
+                return True
+            if isinstance(curve, list) and len(curve) >= 4 * i + 4 and \
+                    (float(curve[4 * i + 1]) != start or float(curve[4 * i + 3]) != start):
+                return True
+    return False
 
 
 def runtime_notes(data: dict[str, Any], stamp: str) -> list[str]:
@@ -165,7 +216,8 @@ def runtime_notes(data: dict[str, Any], stamp: str) -> list[str]:
         a later constraint moves one of those bones.
       * A local, absolute (not relative) transform constraint mixes rotation and shear straight
         from one angle to the other instead of the shortest way round. That shows when its rotate
-        or shear mix is partway (between 0 and 1) and the angles are over 180 degrees apart.
+        or shear mix is ever fractional (set, keyed or between keys) and the angles are over 180
+        degrees apart.
     And from 4.3:
       * A local, absolute transform constraint sets the scale it mixes; 4.0 to 4.2 divided it by
         the bone's own scale. That shows when it mixes scale into bones whose own scale is not 1.
@@ -179,7 +231,7 @@ def runtime_notes(data: dict[str, Any], stamp: str) -> list[str]:
         if not c.get("local") or c.get("relative"):
             continue
         partway = sorted({name for mix, name in (("mixRotate", "rotate"), ("mixShearY", "shear"))
-                          if any(0 < abs(m) < 1 for m in _mixes(data, c, mix))})
+                          if _ever_fractional(data, c, mix)})
         if partway:
             notes.append(f"Transform constraint '{c['name']}' mixes {' and '.join(partway)} partway: Spine {version} "
                          "runtimes mix those angles without taking the shortest way round, so when they are more "

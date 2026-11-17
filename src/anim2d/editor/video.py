@@ -106,7 +106,8 @@ def write_mp4(frames: Iterable[QImage], path: Path, fps: float, timeout: float =
     recorder.setQuality(QMediaRecorder.Quality.VeryHighQuality)
     recorder.setOutputLocation(QUrl.fromLocalFile(str(Path(path).resolve())))
     loop = QEventLoop()
-    state = {"sent": 0, "pending": prepared(first), "error": None, "stopping": False, "failure": None}
+    state = {"sent": 0, "pending": prepared(first), "error": None, "stopping": False, "failure": None,
+             "busy": False}
     step = 1_000_000 / fps  # microseconds
     watchdog = QTimer()
     watchdog.setSingleShot(True)
@@ -114,6 +115,9 @@ def write_mp4(frames: Iterable[QImage], path: Path, fps: float, timeout: float =
     watchdog.timeout.connect(loop.quit)
 
     def send() -> None:
+        if state["busy"]:  # re-entered from processEvents() while a frame paints: the outer call keeps sending
+            return
+        state["busy"] = True
         try:
             while state["pending"] is not None:
                 i = state["sent"]
@@ -130,6 +134,8 @@ def write_mp4(frames: Iterable[QImage], path: Path, fps: float, timeout: float =
             state["failure"] = exc
             loop.quit()
             return
+        finally:
+            state["busy"] = False
         if not state["stopping"]:
             state["stopping"] = True
             recorder.stop()

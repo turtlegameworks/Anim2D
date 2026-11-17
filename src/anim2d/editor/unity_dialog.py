@@ -63,6 +63,7 @@ class UnityDialog(QDialog):
         layout.addWidget(buttons)
         self.project.textChanged.connect(self._update)
         self.folder.textChanged.connect(self._update)
+        self.version.currentIndexChanged.connect(self._update)  # the note says whether it matches spine-unity
         self.exported: Path | None = None
         self._update()
 

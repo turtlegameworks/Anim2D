@@ -1638,7 +1638,8 @@ class Document(ConstraintsMixin, ShapesMixin, SkinsMixin, BoneOpsMixin):
             if stamp.startswith("4.0"):
                 data["skeleton"]["spine"] = stamp
                 return data, notes
-            try:
+            try:  # an unknown version stops here, before anything is written (the conversion can't fail)
+                spine4x.check(stamp)
                 notes += spine4x.runtime_notes(data, stamp)
             except ValueError as exc:
                 raise EditorError(str(exc)) from None

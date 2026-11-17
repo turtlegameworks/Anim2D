@@ -148,7 +148,8 @@ class PlayblastDialog(QDialog):
 
         for signal in (self.animation.currentTextChanged, self.format.currentIndexChanged,
                        self.scale.currentIndexChanged, self.name.textChanged, self.folder.edit.textChanged,
-                       self.whole.toggled, self.start.valueChanged, self.end.valueChanged, self.fps.valueChanged):
+                       self.whole.toggled, self.start.valueChanged, self.end.valueChanged, self.fps.valueChanged,
+                       self.repeat.valueChanged):
             signal.connect(self._refresh)
         self.animation.currentTextChanged.connect(self._animation_changed)
         if saved.range != "custom" or not saved.end:

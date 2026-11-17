@@ -206,6 +206,16 @@ def test_export_writes_the_layout_of_the_chosen_version(boy, tmp_path, version):
     assert data == spine4x.upgrade(json.loads(base.read_text(encoding="utf-8")), spine4x.stamp_for(version))
 
 
+def test_an_unknown_4x_version_is_an_editor_error(boy, tmp_path):
+    out = tmp_path / "boy.json"
+    for stamp in ("4.4.1", "4.x"):
+        with pytest.raises(EditorError, match="4"):
+            boy.export_spine_json(out, stamp=stamp, copy_images=False)
+        with pytest.raises(EditorError):
+            boy.export_data(stamp)
+    assert not out.exists()
+
+
 def test_binary_export_stays_40_only(boy, tmp_path):
     with pytest.raises(EditorError, match="Spine 4.0 only"):
         boy.export_spine_json(tmp_path / "boy.skel", stamp=spine4x.STAMP_43, binary=True, copy_images=False)
@@ -356,3 +366,53 @@ def test_path_constraint_partial_translate_mix_plays_the_same(tmp_path):
     for version in ("4.1", "4.2", "4.3"):
         difference, where = _difference(tmp_path, data, version)
         assert difference <= 0.025, f"Spine {version}: {difference} at {where}"
+
+
+def _curve(rotate_handles: tuple[float, float] = (0, 0)) -> list[float]:
+    """A 4.0 transform key curve over its six channels (mixRotate first), every other channel flat at 0."""
+    out = []
+    for channel in range(6):
+        cy1, cy2 = rotate_handles if channel == 0 else (0, 0)
+        out += [0.0 + 0.1 * channel, cy1, 0.2 + 0.1 * channel, cy2]
+    return out
+
+
+def _zero_key(time: float, **extra) -> dict:
+    return {"time": time, "mixRotate": 0, "mixX": 0, "mixScaleX": 0, "mixShearY": 0, **extra}
+
+
+@needs_4x
+def test_a_mix_only_its_bezier_handles_move_still_drives_the_property(tmp_path):
+    """Keys at 0 with a Bezier curve whose handles rise to 1: the rotate mix is about 0.75 between
+    them, so the 4.3 constraint needs its rotate mapping although no key or setup value is set."""
+    source = V40 / "spineboy-pro.json"
+    if not source.is_file():
+        pytest.skip("needs tools/fetch_spine_runtime.py")
+    data = json.loads(source.read_text(encoding="utf-8"))
+    c = next(c for c in data["transform"] if c["name"] == "aim-torso-transform")
+    c.update(mixRotate=0, mixX=0, mixScaleX=0, mixShearY=0)
+    data["animations"]["aim"]["transform"]["aim-torso-transform"] = [
+        _zero_key(0, curve=_curve((1, 1))), _zero_key(1)]
+    converted = spine4x.upgrade(data, spine4x.STAMP_43)
+    torso = next(c for c in converted["constraints"] if c["name"] == "aim-torso-transform")
+    assert set(torso["properties"]) == {"rotate"}
+    difference, where = _difference(tmp_path, data, "4.3")
+    assert difference <= 0.025, f"{difference} at {where}"
+
+
+def test_the_local_mix_note_sees_mixes_between_keys():
+    data = _rig_40()
+    data["transform"][0].update(local=True, relative=False, mixRotate=1, mixShearY=0)
+    keys = data["animations"]["a"]["transform"]["tc"]
+    keys[:] = [{"time": 0, "mixRotate": 0, "mixShearY": 0}, {"time": 1, "mixRotate": 1, "mixShearY": 0}]
+    assert "rotate partway" in spine4x.runtime_notes(data, spine4x.STAMP_42)[0]  # 0.5 halfway, linearly
+    keys[0]["curve"] = "stepped"  # jumps from 0 to 1: never partway
+    assert spine4x.runtime_notes(data, spine4x.STAMP_42) == []
+    keys[:] = [{"time": 0, "mixRotate": 1, "mixShearY": 0, "curve": _curve((0.5, 1))},
+               {"time": 1, "mixRotate": 1, "mixShearY": 0}]  # both at 1, but the curve dips to about 0.8
+    assert "rotate partway" in spine4x.runtime_notes(data, spine4x.STAMP_42)[0]
+    keys[0]["curve"] = _curve((1, 1))  # a curve that stays at 1
+    assert spine4x.runtime_notes(data, spine4x.STAMP_42) == []
+    keys[0]["mixRotate"] = keys[1]["mixRotate"] = 2  # whole mixes turn by whole turns: the same
+    keys[0]["curve"] = _curve((2, 2))
+    assert spine4x.runtime_notes(data, spine4x.STAMP_42) == []

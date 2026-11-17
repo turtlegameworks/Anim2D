@@ -510,8 +510,9 @@ in 4.2 and 4.3, which no data can undo. Where a rig depends on it, the export na
 * **4.2+, world shear read back:** shear that a world transform constraint puts on bones is read
   back with the opposite sign when a later constraint moves them. Uneven scale under such
   constraints can also add shear; that depends on the pose and is not named.
-* **4.2+, local partial angle mixes:** local, absolute transform constraints mix a partway rotate
-  or shear without taking the shortest way round.
+* **4.2+, local partial angle mixes:** local, absolute transform constraints mix a rotate or
+  shear that is ever partway (as set, at a key, or between keys going from 0 to 1) without taking
+  the shortest way round.
 * **4.3, local scale mixes:** local, absolute transform constraints set the scale they mix,
   where 4.0 to 4.2 divided it by the bone's own scale.
 

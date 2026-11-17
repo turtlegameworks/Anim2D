@@ -501,10 +501,10 @@ def write_avi(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
     try:
         for img in frames:
             writer.add(avi_payload(img, s))
-    except BaseException:
+        writer.close(max(0, round(s.pause_after * s.fps)))
+    except BaseException:  # also when finishing the file fails (a full disk): no half-written file stays
         writer.abort()
         raise
-    writer.close(max(0, round(s.pause_after * s.fps)))
 
 
 def _atom(kind: bytes, *parts: bytes) -> bytes:
@@ -598,10 +598,10 @@ def write_mov(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
     try:
         for img in frames:
             writer.add(mov_sample(img, s))
-    except BaseException:
+        writer.close(max(0, round(s.pause_after * s.fps)))
+    except BaseException:  # also when finishing the file fails (a full disk): no half-written file stays
         writer.abort()
         raise
-    writer.close(max(0, round(s.pause_after * s.fps)))
 
 
 def write_mp4(frames: list[Image.Image], path: Path, s: MediaExport) -> None:
