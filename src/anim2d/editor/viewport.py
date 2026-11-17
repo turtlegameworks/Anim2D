@@ -1126,15 +1126,15 @@ class Viewport(QWidget):
         if tool == "select" and self.state.vertex_selection:
             self.state.set_vertex_selection(set())
         hit = self.pick(pos)
-        if mods & Qt.KeyboardModifier.ControlModifier and tool in MULTI_SELECT_TOOLS:
-            # Ctrl+click: add the bone to the selection or take it out; then drag every selected bone
-            if hit and hit[0] == "bone":
-                self.state.toggle_bone(hit[1])
-                if hit[1] in self.state.selected_bones():
-                    wx, wy = self.to_world(pos)
-                    self.begin_drag(wx, wy)
-                count = len(self.state.selected_bones())
-                self.status.emit(f"{count} bone{'s' if count != 1 else ''} selected")
+        if mods & Qt.KeyboardModifier.ControlModifier and tool in MULTI_SELECT_TOOLS and hit and hit[0] == "bone":
+            # Ctrl+click on a bone: add it to the selection or take it out; then drag every selected bone.
+            # (Ctrl+click on anything else selects it as before.)
+            self.state.toggle_bone(hit[1])
+            if hit[1] in self.state.selected_bones():
+                wx, wy = self.to_world(pos)
+                self.begin_drag(wx, wy)
+            count = len(self.state.selected_bones())
+            self.status.emit(f"{count} bone{'s' if count != 1 else ''} selected")
             return
         if hit and hit[0] == "bone" and self.state.extra_bones and hit[1] in self.state.selected_bones() \
                 and tool in MULTI_SELECT_TOOLS:

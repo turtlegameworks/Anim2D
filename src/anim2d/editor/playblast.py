@@ -2,19 +2,26 @@
 without the tools, gizmos and selection, to a video, an animated image or an image sequence.
 
 Unlike File > Export (which frames the skeleton itself), a playblast is a quick review render of
-what the animator sees. Frames are painted by the viewport in capture mode, then written with the
-same writers as the media export.
+what the animator sees. Frames are painted by the viewport in capture mode, one at a time, and
+encoded on worker threads while the next frame paints. Image sequences, AVI, MOV and MP4 are
+written as the frames come, so memory stays flat however long the playblast is; GIF keeps one
+byte a pixel per frame, and WebP and APNG (which Pillow writes from all the frames) one RGBA image
+per frame. The bytes are the same as the media export's writers produce from the same frames.
 """
 
 from __future__ import annotations
 
+import io
 import os
 import subprocess
 import sys
-from dataclasses import asdict, dataclass, fields
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
+from PIL import Image
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor, QImage, QPainter, QRegion
 from PySide6.QtWidgets import QWidget
@@ -98,27 +105,28 @@ def capture_size(viewport: QWidget, s: PlayblastSettings) -> tuple[int, int]:
     return w // 2 * 2, h // 2 * 2  # even: the video encoders need it
 
 
-def render_frames(viewport, animation: str, s: PlayblastSettings,
-                  progress: Callable[[int, int], bool] | None = None) -> list[QImage]:
-    """Paint every frame with the viewport in capture mode. progress(done, total) returning False
-    cancels (raises EditorError). The editor's mode, animation, time and pose come back afterwards."""
+def frames(viewport, animation: str, s: PlayblastSettings,
+           progress: Callable[[int, int], bool] | None = None) -> Iterator[QImage]:
+    """Paint each frame with the viewport in capture mode, one at a time (opaque ARGB32 images).
+    progress(done, total) returning False cancels (raises EditorError). The editor's mode,
+    animation, time and pose come back when the generator finishes or is closed."""
     st = viewport.state
     doc = st.doc
     if animation not in doc.data["animations"]:
         raise EditorError("Choose an animation to playblast")
     first, last, fps = frame_range(doc, animation, s)
-    frames = list(range(first, last + 1))
+    numbers = list(range(first, last + 1))
     length = max(0, round(doc.animation_duration(animation) * fps))  # the counter shows "frame N / length"
     w, h = capture_size(viewport, s)
     k = w / max(1, viewport.width()), h / max(1, viewport.height())
     saved = (st.mode, st.animation, st.time, st.pose_overrides)
-    images: list[QImage] = []
+    total = len(numbers) * max(1, s.repeat)
+    done = 0
     try:
         st.mode, st.animation, st.pose_overrides = "animate", animation, {}  # quietly: no signals per frame
-        total = len(frames) * max(1, s.repeat)
-        for loop in range(max(1, s.repeat)):
-            for i, frame in enumerate(frames):
-                if progress is not None and not progress(len(images), total):
+        for _ in range(max(1, s.repeat)):
+            for frame in numbers:
+                if progress is not None and not progress(done, total):
                     raise EditorError("Playblast cancelled")
                 st.time = frame / fps
                 hud = f"{animation}   frame {frame} / {length}   {fps:g} fps" if s.hud else ""
@@ -129,41 +137,158 @@ def render_frames(viewport, animation: str, s: PlayblastSettings,
                 p.scale(*k)
                 viewport.render(p, QPoint(), QRegion(), QWidget.RenderFlag.DrawWindowBackground)
                 p.end()
-                images.append(image)
+                done += 1
+                yield image
     finally:
         viewport.capture = None
         st.mode, st.animation, st.time, st.pose_overrides = saved
         viewport.update()
-    return images
 
 
-def write(images: list[QImage], path: Path, s: PlayblastSettings, fps: float) -> list[Path]:
-    """Write the frames in the chosen format. Returns the files written."""
-    if not images:
-        raise EditorError("Nothing to record")
-    files = files_for(s, path, len(images))
+def frame_count(doc, animation: str, s: PlayblastSettings) -> int:
+    first, last, _ = frame_range(doc, animation, s)
+    return (last - first + 1) * max(1, s.repeat)
+
+
+# Bytes a pixel each frame takes in memory for the formats Pillow writes from all the frames
+# (measured: GIF keeps palette frames; APNG compares each frame with a kept copy of the last).
+HELD_BYTES = {"gif": 1, "webp": 4, "apng": 8}
+
+
+def memory_needed(doc, animation: str, s: PlayblastSettings, viewport) -> int:
+    """Roughly how many bytes the frames take in memory while writing (0 for the formats written
+    as the frames come)."""
+    if s.format not in HELD_BYTES or animation not in doc.data["animations"]:
+        return 0
+    w, h = capture_size(viewport, s)
+    return frame_count(doc, animation, s) * w * h * HELD_BYTES[s.format]
+
+
+def to_rgb(image: QImage) -> Image.Image:
+    """An opaque frame as an RGB Pillow image: the same pixels as flattening it on black."""
+    rgb = image.convertToFormat(QImage.Format.Format_RGB888)
+    return Image.frombuffer("RGB", (rgb.width(), rgb.height()), bytes(rgb.constBits()), "raw", "RGB",
+                            rgb.bytesPerLine(), 1)
+
+
+def _workers() -> int:
+    return max(1, min(4, (os.cpu_count() or 2)))
+
+
+def _media_settings(s: PlayblastSettings, fps: float) -> mx.MediaExport:
+    return mx.MediaExport(kind=s.format, fps=fps, transparent=False, background="#000000",
+                          jpeg_quality=max(1, min(100, int(s.quality))),
+                          encoding="mjpeg" if s.format == "avi" else "png", forever=True)
+
+
+def _jpeg(image: QImage, quality: int) -> bytes:
+    buf = io.BytesIO()
+    to_rgb(image).save(buf, "JPEG", quality=quality)
+    return buf.getvalue()
+
+
+def _mov_png(image: QImage) -> bytes:
+    buf = io.BytesIO()
+    to_rgb(image).convert("RGBA").save(buf, "PNG", compress_level=6)  # 32-bit, as the MOV header says
+    return buf.getvalue()
+
+
+def _save_frame(image: QImage, path: Path, fmt: str, quality: int) -> None:
+    if fmt == "jpeg":
+        to_rgb(image).save(path, "JPEG", quality=quality)
+    else:
+        to_rgb(image).save(path, "PNG", compress_level=6)
+
+
+def _pipeline(source: Iterator[Any], encode: Callable[[Any], Any], take: Callable[[Any], None]) -> None:
+    """encode(frame) runs on worker threads while the next frames paint; take(result) gets the
+    results in frame order. At most a few frames are in flight, so memory stays flat. (Pillow and
+    Qt's image conversion release the GIL, so the encoding really runs in parallel.)"""
+    workers = _workers()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending: deque = deque()
+        try:
+            for image in source:
+                pending.append(pool.submit(encode, image))
+                while len(pending) > workers * 2:
+                    take(pending.popleft().result())
+            while pending:
+                take(pending.popleft().result())
+        except BaseException:
+            for future in pending:
+                future.cancel()
+            raise
+
+
+def write(source: Iterator[QImage], path: Path, s: PlayblastSettings, fps: float, count: int) -> list[Path]:
+    """Encode the frames as they are painted and write them in the chosen format. Returns the
+    files written. On an error or a cancel, what was written is removed."""
+    files = files_for(s, path, count)
     if not s.overwrite:
         for f in files:
             if f.exists():
                 raise EditorError(f"{f.name} already exists. Tick Overwrite or choose another name.")
     path.parent.mkdir(parents=True, exist_ok=True)
-    settings = mx.MediaExport(kind=s.format, fps=fps, transparent=False, background="#000000",
-                              jpeg_quality=max(1, min(100, int(s.quality))), encoding="png", forever=True)
-    if s.format == "avi":
-        settings.encoding = "mjpeg"
-    frames = [mx.to_pil(i) for i in images]
-    writer = {"gif": mx.write_gif, "apng": mx.write_apng, "webp": mx.write_webp, "avi": mx.write_avi,
-              "mov": mx.write_mov, "mp4": mx.write_mp4}.get(s.format)
-    if writer is not None:
-        writer(frames, files[0], settings)
-    else:
-        for img, f in zip(frames, files):
-            flat = mx.flatten(img, "#000000")
-            if s.format == "jpeg":
-                flat.save(f, "JPEG", quality=settings.jpeg_quality)
+    settings = _media_settings(s, fps)
+    quality = settings.jpeg_quality
+    fmt = s.format
+    written: list[Path] = []
+    try:
+        if fmt == "mp4":
+            from .video import write_mp4
+            written.append(files[0])
+            write_mp4(source, files[0], fps)
+        elif fmt in ("png", "jpeg"):
+            numbered = iter(files)
+
+            def jobs() -> Iterator[tuple[QImage, Path]]:
+                for image in source:
+                    f = next(numbered)
+                    written.append(f)  # before it is saved: a cancel removes the frames still being saved
+                    yield image, f
+            _pipeline(jobs(), lambda job: _save_frame(job[0], job[1], fmt, quality), lambda _: None)
+        elif fmt in ("avi", "mov"):
+            first = next(source, None)
+            if first is None:
+                raise EditorError("Nothing to record")
+            writer = (mx.AviWriter if fmt == "avi" else mx.MovWriter)(files[0], first.width(), first.height(),
+                                                                       settings)
+            written.append(files[0])
+            encode = (lambda image: _jpeg(image, quality)) if fmt == "avi" else _mov_png
+            try:
+                _pipeline(_chain(first, source), encode, writer.add)
+            except BaseException:
+                writer.abort()
+                raise
+            writer.close()
+        else:  # gif, webp, apng: Pillow writes these from all the frames, kept as compact as possible
+            if fmt == "gif":
+                def encode(image: QImage) -> Image.Image:  # one byte a pixel
+                    return mx.gif_frame(to_rgb(image).convert("RGBA"), settings)
             else:
-                flat.save(f, "PNG", compress_level=6)
-    return files
+                def encode(image: QImage) -> Image.Image:
+                    return to_rgb(image).convert("RGBA")
+            out: list[Image.Image] = []
+            _pipeline(source, encode, out.append)
+            if not out:
+                raise EditorError("Nothing to record")
+            written.append(files[0])
+            if fmt == "gif":
+                mx.save_gif(out, files[0], settings)
+            else:  # the frames are opaque already: nothing to flatten
+                (mx.write_webp if fmt == "webp" else mx.write_apng)(out, files[0], replace(settings, transparent=True))
+    except BaseException:
+        if hasattr(source, "close"):
+            source.close()
+        for f in written:
+            f.unlink(missing_ok=True)
+        raise
+    return written
+
+
+def _chain(first: QImage, rest: Iterator[QImage]) -> Iterator[QImage]:
+    yield first
+    yield from rest
 
 
 def playblast(viewport, s: PlayblastSettings, progress: Callable[[int, int], bool] | None = None) -> list[Path]:
@@ -175,8 +300,12 @@ def playblast(viewport, s: PlayblastSettings, progress: Callable[[int, int], boo
     if not s.overwrite and FORMATS[s.format][2] and path.exists():
         raise EditorError(f"{path.name} already exists. Tick Overwrite or choose another name.")
     _, _, fps = frame_range(st.doc, animation, s)
-    images = render_frames(viewport, animation, s, progress)
-    return write(images, path, s, fps)
+    count = frame_count(st.doc, animation, s)
+    source = frames(viewport, animation, s, progress)
+    try:
+        return write(source, path, s, fps, count)
+    finally:
+        source.close()
 
 
 def reveal(path: Path) -> None:

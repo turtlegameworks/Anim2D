@@ -379,6 +379,8 @@ The Weights tool (Shift+W) opens the **Weights** view, laid out like Spine's.
 | Bone chains | Tree bone menu → Add bone chain…; path attachment menu → Bone chain along this path… | A chain out of the bone's tip (count, length, curl), or along a path's curve |
 | Rig mesh | Tree mesh menu → Rig to the bones over it | Binds the mesh to the bones that reach it, weighted by distance |
 | Physics | Tree bone menu → Physics…; Preview → Physics; Edit → Bake physics to keys | Springy bones (stiffness, damping, inertia, mass, gravity, wind, limit, mix) for hair, cloth and tails. The Preview simulates them; Spine runtimes don't play Anim2D's physics, so bake them to rotate keys before exporting (exports leave the constraints out and say so) |
+| Several bones at once | Ctrl+click bones in the viewport or the Tree (Command+click on a Mac) | Adds a bone to the selection or takes it out; the other selected bones are highlighted. Translate, Rotate, Scale and Shear drags move them all (a child of another selected bone is not moved twice), **K** keys them all and **Delete** deletes them all. Ctrl+click on anything else selects it as a plain click does |
+| Show / hide bones | View → Show bones (Ctrl+H; Control+H on a Mac, where Command+H hides the app), 🦴 Bones on the mode bar | Hides the bones and constraint lines to see the animation as it will look; the same switch as Options → Bones → visible |
 | History | View → History | Every undo step; click one to go back or forward to it |
 | Motion paths | View → Motion paths (Ctrl+Alt+M), Animate mode | The selected bone's path over the animation: a dot per frame, an orange diamond at each key. Drag a dot to move the bone at that frame (it sets the translate key there, whatever the parents do) |
 | Ease presets | Timeline → Curve… | Ease in/out (normal and strong), Overshoot, Anticipate, Anticipate + overshoot for the selected keys. **Bounce** and **Elastic** add keys between each selected key and the next (bone timelines) |
@@ -403,6 +405,7 @@ The Weights tool (Shift+W) opens the **Weights** view, laid out like Spine's.
 | Import Data… | Adds another Spine project's or Spine JSON's bones, slots, constraints, skins, events and animations to the open skeleton. What already exists is kept; a clashing animation name gets a number. One Undo removes it |
 | Import PSD… | Each Photoshop layer becomes an image (in a folder named after the PSD), a slot and an attachment placed where the layer sits; the canvas centre is the origin. 8-bit RGB or grayscale, uncompressed or RLE |
 | Export… (Ctrl+E) | See [Export](#export) |
+| Playblast… (Ctrl+Shift+B) | See [Playblast](#playblast) |
 | Unity Bridge…, Export to Unity (Ctrl+Alt+E) | See [Unity bridge](#unity-bridge) |
 | Texture Packer… (Ctrl+P) | Packs every PNG/JPEG in a folder (with subfolders) into an atlas; see [Texture Packer](#texture-packer) |
 | Texture Unpacker… | Writes every region of a `.atlas` (4.0 or 3.8) back out as its own PNG, at its original size with whitespace and rotation restored and premultiplied alpha undone. A region with an index is written as `name_<index>.png` |
@@ -542,6 +545,26 @@ or uncompressed with alpha), **MOV** (PNG with alpha, or JPEG) and **MP4** (H.26
   provides, through Qt Multimedia. No extra software is needed.
 * JPEG-based video is padded to an even width and height with the background colour.
 * Anim2D has no audio, so videos have no sound.
+
+## Playblast
+
+**File → Playblast…** (Ctrl+Shift+B, or 🎬 Playblast on the mode bar) records an animation as the
+viewport frames it: the zoom, pan and background the animator sees, without tools, gizmos or the
+selection. It is a quick review render; **File → Export** frames the skeleton itself.
+
+| Option | Choices |
+| --- | --- |
+| Animation, Range | The animation, all of it or a custom frame range; frames per second (default: the skeleton's) |
+| Size | 25 % to 200 % of the viewport's size |
+| Show | Bones, grid, and a HUD with the animation name and frame number |
+| Format | MP4 (H.264), MOV (PNG, lossless), AVI (Motion JPEG), GIF, WebP, APNG, or PNG or JPEG image sequences; quality for JPEG, Motion JPEG and WebP |
+| Repeat, Overwrite, Open when done | Plays the animation N times; replaces existing files; opens the result |
+
+Each frame is painted, then encoded on worker threads while the next one paints. MP4, MOV, AVI and
+image sequences are written as the frames come, so memory stays flat however long the playblast is.
+GIF, WebP and APNG are written by Pillow from all the frames, so they stay in memory: one byte a
+pixel each for GIF, four for WebP and about eight for APNG. The dialog says so when that passes
+1 GB. Cancelling removes what was written.
 
 ## Unity bridge
 

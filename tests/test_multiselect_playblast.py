@@ -175,3 +175,102 @@ def test_playblast_dialog_runs(win, tmp_path):
     assert (tmp_path / "dlg.gif").is_file()
     again = PlayblastDialog(win.viewport, win, store=win.store)  # the choices are remembered
     assert again.format.currentData() == "gif" and again.folder.text() == str(tmp_path)
+
+
+def _old_way(win, s):
+    """What the playblast wrote before it streamed: every frame painted first, converted with
+    to_pil and handed to the media export's writers."""
+    from anim2d.editor import media_export as mx
+    images = [img.copy() for img in pb.frames(win.viewport, s.animation, s)]
+    _, _, fps = pb.frame_range(win.doc, s.animation, s)
+    settings = pb._media_settings(s, fps)
+    return [mx.to_pil(i) for i in images], settings
+
+
+@pytest.mark.parametrize("fmt", ["avi", "mov", "gif", "webp", "apng", "png", "jpeg"])
+def test_streamed_playblast_writes_the_same_bytes(win, tmp_path, fmt):
+    from anim2d.editor import media_export as mx
+    s = pb.PlayblastSettings(format=fmt, folder=str(tmp_path / "new"), name="clip", animation="walk", scale=25,
+                             fps=10, repeat=2, bones=True, grid=True)
+    files = pb.playblast(win.viewport, s)
+    frames, settings = _old_way(win, s)
+    assert len(frames) == 12
+    ref = tmp_path / f"ref{files[0].suffix}"
+    if fmt in ("png", "jpeg"):
+        assert len(files) == 12
+        for f, img in zip(files, frames):
+            flat = mx.flatten(img, "#000000")
+            if fmt == "jpeg":
+                flat.save(ref, "JPEG", quality=settings.jpeg_quality)
+            else:
+                flat.save(ref, "PNG", compress_level=6)
+            assert f.read_bytes() == ref.read_bytes(), f.name
+    else:
+        getattr(mx, f"write_{fmt}")(frames, ref, settings)
+        assert files[0].read_bytes() == ref.read_bytes()
+
+
+@pytest.mark.parametrize("fmt", ["png", "mov", "avi", "gif"])
+def test_cancelling_a_playblast_leaves_no_files(win, tmp_path, fmt):
+    st = win.state
+    before = (st.mode, st.animation, st.time)
+    s = pb.PlayblastSettings(format=fmt, folder=str(tmp_path), name="cut", animation="walk", scale=25, fps=20)
+    with pytest.raises(EditorError, match="cancelled"):
+        pb.playblast(win.viewport, s, lambda done, total: done < 4)
+    assert list(tmp_path.iterdir()) == []
+    assert (st.mode, st.animation, st.time) == before and win.viewport.capture is None
+
+
+def test_frames_are_painted_as_they_are_written(win, tmp_path, monkeypatch):
+    """Streaming: the writer never has more than a few painted frames waiting."""
+    painted, written = [], []
+    real_frames = pb.frames
+
+    def counting(*args, **kwargs):
+        for image in real_frames(*args, **kwargs):
+            painted.append(1)
+            yield image
+    monkeypatch.setattr(pb, "frames", counting)
+    real_add = pb.mx.MovWriter.add
+
+    def add(self, sample):
+        written.append(len(painted))
+        real_add(self, sample)
+    monkeypatch.setattr(pb.mx.MovWriter, "add", add)
+    s = pb.PlayblastSettings(format="mov", folder=str(tmp_path), name="m", animation="walk", scale=25, fps=60)
+    pb.playblast(win.viewport, s)
+    assert len(written) == 31
+    assert max(p - i for i, p in enumerate(written)) <= 2 * pb._workers() + 1
+
+
+def test_mp4_playblast_streams_frames(win, tmp_path):
+    s = pb.PlayblastSettings(format="mp4", folder=str(tmp_path), name="v", animation="walk", scale=25, fps=10)
+    try:
+        files = pb.playblast(win.viewport, s)
+    except EditorError as exc:
+        if "encoder" in str(exc):
+            pytest.skip(str(exc))
+        raise
+    assert files[0].is_file() and files[0].stat().st_size > 0
+
+
+def test_memory_note_for_formats_that_keep_every_frame(win):
+    s = pb.PlayblastSettings(format="apng", animation="walk", fps=30, scale=100)
+    w, h = pb.capture_size(win.viewport, s)
+    assert pb.memory_needed(win.doc, "walk", s, win.viewport) == pb.frame_count(win.doc, "walk", s) * w * h * 8
+    for fmt in ("mp4", "mov", "avi", "png", "jpeg"):
+        assert pb.memory_needed(win.doc, "walk", pb.PlayblastSettings(format=fmt, animation="walk"), win.viewport) == 0
+
+
+def test_show_bones_shortcut_avoids_the_mac_hide_app_key():
+    import sys
+    from anim2d.editor import main_window
+    assert main_window.BONES_SHORTCUT == ("Meta+H" if sys.platform == "darwin" else "Ctrl+H")
+
+
+def test_ctrl_click_off_the_bones_works_like_a_click(win):
+    """Ctrl+click only gathers bones: on empty space it clears the selection as a plain click does."""
+    vp = win.viewport
+    click(vp, bone_point(win, "a"))
+    click(vp, QPointF(5, 5), Qt.KeyboardModifier.ControlModifier)
+    assert win.state.selection.empty and win.state.selected_bones() == []

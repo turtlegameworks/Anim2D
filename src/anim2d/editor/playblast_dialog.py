@@ -205,7 +205,12 @@ class PlayblastDialog(QDialog):
             path = pb.output_path(s, name)
             if not pb.FORMATS[s.format][2]:
                 path = path.with_name(f"{path.stem}_0000{path.suffix}  …")
-            self.path_label.setText(f"Saves {path}")
+            note = ""
+            need = pb.memory_needed(self.viewport.state.doc, s.animation, s, self.viewport)
+            if need > 1 << 30:
+                note = (f"\n{pb.FORMATS[s.format][0]} keeps every frame in memory (about {need / (1 << 30):.1f} GB "
+                        "here): for long or large playblasts, MP4, MOV or AVI write each frame as it comes.")
+            self.path_label.setText(f"Saves {path}{note}")
         except EditorError as exc:
             self.path_label.setText(str(exc))
         self.run_button.setEnabled(bool(s.animation))

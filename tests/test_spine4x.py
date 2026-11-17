@@ -338,3 +338,21 @@ def test_what_the_newer_runtimes_changed(tmp_path, change):
     assert _difference(tmp_path, data, after)[0] > 1
     if note:
         assert not any(note in n for n in spine4x.runtime_notes(data, spine4x.stamp_for(same_until)))
+
+
+@needs_4x
+def test_path_constraint_partial_translate_mix_plays_the_same(tmp_path):
+    """A path constraint's mixY defaults to its mixX in 4.0 and 4.3 alike, so nothing is written for
+    it: writing 1 (4.2's reader also defaults to mixX) moved the legs 93 units in the 4.3 runtime."""
+    source = V40 / "stretchyman-pro.json"
+    if not source.is_file():
+        pytest.skip("needs tools/fetch_spine_runtime.py")
+    data = json.loads(source.read_text(encoding="utf-8"))
+    for c in data["path"]:
+        c["mixX"] = 0.5
+        c.pop("mixY", None)
+    converted = spine4x.upgrade(data, spine4x.STAMP_43)
+    assert all("mixY" not in c for c in converted["constraints"] if c["type"] == "path")
+    for version in ("4.1", "4.2", "4.3"):
+        difference, where = _difference(tmp_path, data, version)
+        assert difference <= 0.025, f"Spine {version}: {difference} at {where}"
