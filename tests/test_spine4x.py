@@ -165,6 +165,13 @@ def test_the_shear_note_names_world_shear_that_a_later_constraint_reads():
     assert spine4x.runtime_notes(data, spine4x.STAMP_43) == []
     data["animations"]["a"]["transform"]["tc"][1]["mixShearY"] = 0.5  # keyed shear counts too
     assert len(spine4x.runtime_notes(data, spine4x.STAMP_43)) == 1
+    data["animations"]["a"]["transform"]["tc"][1]["mixShearY"] = 0
+    assert spine4x.runtime_notes(data, spine4x.STAMP_43) == []
+    key = data["animations"]["a"]["transform"]["tc"][0]
+    curve = [0.25, 0, 0.75, 0] * 6  # a straight curve for every channel, then shearY's handles rise
+    curve[4 * 5 + 1] = curve[4 * 5 + 3] = 0.5
+    key["curve"] = curve
+    assert len(spine4x.runtime_notes(data, spine4x.STAMP_43)) == 1  # shear along a curve counts too
 
 
 def test_the_local_mix_note_names_partway_rotation_in_local_absolute_constraints():
@@ -444,6 +451,10 @@ def test_the_scale_note_counts_scale_set_by_an_earlier_constraint():
     data["transform"][0]["mixScaleX"] = 0  # 'grow' no longer scales
     assert not any("own scale" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
     data["ik"] = [{"name": "reach", "order": 0, "bones": ["a"], "target": "s", "stretch": True}]  # IK stretch scales
+    assert any("'copy'" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
+    data["ik"][0]["stretch"] = False
+    assert not any("'copy'" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
+    data["animations"]["a"]["ik"] = {"reach": [{"time": 0.5, "stretch": True}]}  # stretch turned on by a key
     assert any("'copy'" in n for n in spine4x.runtime_notes(data, spine4x.STAMP_43))
 
 

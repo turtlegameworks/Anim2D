@@ -266,16 +266,29 @@ def test_cancelling_an_mp4_playblast_leaves_no_file(win, tmp_path, qapp):
     assert win.viewport.capture is None
 
 
-def test_mp4_playblast_streams_frames(win, tmp_path, qapp):
+def test_mp4_playblast_streams_frames(win, tmp_path, qapp, monkeypatch):
     """Like the dialog, the progress callback runs the event loop while frames paint, so the
     encoder's ready signal can arrive inside the frame generator: it must not send twice."""
+    from PySide6.QtMultimedia import QVideoFrameInput
+    _skip_without_mp4()
+    sent = []
+    real_send = QVideoFrameInput.sendVideoFrame
+
+    def counting_send(self, frame):
+        accepted = real_send(self, frame)
+        if accepted:
+            sent.append(frame.startTime())
+        return accepted
+    monkeypatch.setattr(QVideoFrameInput, "sendVideoFrame", counting_send)
+
     def progress(done, total):
         qapp.processEvents()
         return True
-    _skip_without_mp4()
     s = pb.PlayblastSettings(format="mp4", folder=str(tmp_path), name="v", animation="walk", scale=25, fps=30)
     files = pb.playblast(win.viewport, s, progress)  # any failure fails the test
     assert files[0].is_file() and files[0].stat().st_size > 0
+    step = 1_000_000 / s.fps
+    assert sent == [int(i * step) for i in range(pb.frame_count(win.viewport.state.doc, "walk", s))]  # each frame once
 
 
 @pytest.mark.parametrize("kind", ["avi", "mov"])

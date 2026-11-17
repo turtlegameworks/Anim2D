@@ -267,7 +267,10 @@ def _can_scale(data: dict[str, Any], c: dict[str, Any], transform: bool) -> bool
     scale, IK that stretches or compresses, a path constraint that scales its chain."""
     if transform:
         return _drives(data, c, "mixScaleX") or _drives(data, c, "mixScaleY")
-    return bool(c.get("stretch") or c.get("compress")) or c.get("rotateMode") == "chainScale"
+    if c.get("rotateMode") == "chainScale":
+        return True
+    ik = [c] + [k for anim in data.get("animations", {}).values() for k in anim.get("ik", {}).get(c["name"], [])]
+    return any(k.get("stretch") or k.get("compress") for k in ik)  # set up, or turned on by a key
 
 
 def _scaled_bones(data: dict[str, Any]) -> set[str]:
@@ -312,7 +315,7 @@ def _shear_notes(data: dict[str, Any], version: str) -> list[str]:
     transforms = {c["name"] for c in data.get("transform") or []}
     notes = []
     for i, (_, _, _, c) in enumerate(ranked):
-        if c["name"] not in transforms or c.get("local") or not any(_mixes(data, c, "mixShearY")):
+        if c["name"] not in transforms or c.get("local") or not _drives(data, c, "mixShearY"):
             continue
         sheared = with_descendants(set(c.get("bones", [])))
         later = [other["name"] for _, _, _, other in ranked[i + 1:] if sheared & set(other.get("bones", []))]
