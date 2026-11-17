@@ -249,13 +249,13 @@ def test_mp4_playblast_streams_frames(win, tmp_path, qapp):
     def progress(done, total):
         qapp.processEvents()
         return True
+    from PySide6.QtMultimedia import QMediaFormat
+    encode = QMediaFormat.ConversionMode.Encode
+    if QMediaFormat.FileFormat.MPEG4 not in QMediaFormat().supportedFileFormats(encode) or \
+            not QMediaFormat(QMediaFormat.FileFormat.MPEG4).supportedVideoCodecs(encode):
+        pytest.skip("Qt Multimedia can't encode MP4 video on this system")  # asked, not guessed from an error
     s = pb.PlayblastSettings(format="mp4", folder=str(tmp_path), name="v", animation="walk", scale=25, fps=30)
-    try:
-        files = pb.playblast(win.viewport, s, progress)
-    except EditorError as exc:
-        if "lack an H.264 encoder" in str(exc):  # only a system without one; a stall still fails
-            pytest.skip(str(exc))
-        raise
+    files = pb.playblast(win.viewport, s, progress)  # any failure fails the test
     assert files[0].is_file() and files[0].stat().st_size > 0
 
 
